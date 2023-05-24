@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/assets/css/style-entities.css">
+  <title>Login</title>
+</head>
+<body>
+  <main class="login-page">
+    <h1>Entities Login</h1>
+    <div class="login-error-warning" id="error-warning">
+      <img src="/assets/img/error.svg" alt="error">
+      <div>The credentials entered are not valid. Please try again.</div>
+    </div>
+    <form action="/entities/login" method="post" class="login-form">
+      <input type="email" name="email" id="email" placeholder="E-mail">
+      <input type="password" name="password" id="password" placeholder="Password">
+      <button>Login</button>
+    </form>
+    <a href="/" class="white">Back to main page</a>
+  </main>
+  <!--
+  <script>
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const errorWarning = document.getElementById('error-warning');
+    if(urlParams.get('error') == 1){
+      errorWarning.style.display = 'flex';
+    }
+  </script>
+  -->
+</body>
+</html>

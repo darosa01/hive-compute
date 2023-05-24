@@ -1,0 +1,417 @@
+@import url(./root.css);
+
+::-webkit-scrollbar {
+  width: 10px;
+  /* width: 0; */
+}
+
+::-webkit-scrollbar-track {
+  background-color: white;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: darkgrey;
+  /* outline: 1px solid slategrey; */
+}
+
+body{
+  margin: 0;
+  font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+em{
+  font-weight: bold;
+}
+
+footer{
+  text-align: center;
+  padding: 1rem;
+  padding-bottom: calc(50px + 2rem);
+}
+
+header{
+  background-color: var(--main-background-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+nav{
+  align-items: center;
+  display: flex;
+  flex-grow: 1;
+  gap: 2rem;
+  justify-content: end;
+  padding: 2rem;
+}
+nav a{
+  color: white;
+  font-size: 1.25rem;
+  font-weight: bold;
+  text-decoration: none;
+}
+nav a:hover{
+  text-decoration: underline;
+}
+
+section{
+  padding: 2rem;
+}
+
+.activity {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 1rem;
+  padding-top: 0.5rem;
+  border: 1px solid #888;
+  height: 80%;
+  width: 80%;
+}
+
+.activity-background{
+  display: none;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: none;
+  background-color: rgb(0,0,0); 
+  background-color: rgba(0,0,0,0.4);
+}
+
+.activity-button{
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+}
+.activity-button img{
+  height: 32px;
+  width: 32px;
+}
+
+.activity-close{
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+}
+.activity-close:hover,
+.activity-close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.activity-top-bar{
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 1rem;
+}
+.activity-top-bar div{
+  align-self: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+.big{
+  font-size: 1.25rem !important;
+}
+
+.bigger{
+  font-size: 2rem !important;
+}
+
+.button{
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+  border: none;
+  border-radius: 15px;
+  padding: 0.5rem 1rem;
+  transition: 0.2s;
+}
+.button:not(:disabled){
+  cursor: pointer;
+}
+
+.button-group{
+  align-items: center;
+  display: flex;
+  flex-grow: 1;
+  gap: 1rem;
+  justify-content: end;
+}
+
+.carousel-cell{
+  background-color: #eeefff;
+  display: flex;
+  width: 100%;
+}
+.carousel-cell > img{
+  width: 100%;
+}
+
+.indicator{
+  width: calc(32px/2);
+  height: calc(32px/2);
+  border-radius: 50%;
+  background-color: red;
+}
+
+.indicator-group{
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+}
+.indicator-group > div {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+.indicator-group img{
+  height: 32px;
+  width: 32px;
+}
+
+.intro{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  text-align: right;
+  gap: 2rem;
+  align-items: center;
+  padding: 0 2rem;
+}
+
+.intro-arrow{
+  text-align: center;
+}
+.intro-arrow img{
+  height: 90px;
+}
+
+.investigation-element{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: black;
+}
+.investigation-element > div{
+  font-size: 1.25rem;
+  font-weight: bold;
+  text-align: center;
+  padding-top: 1rem;
+}
+.investigation-element > img{
+  width: 28vw;
+  aspect-ratio: 2;
+}
+.investigation-element > p{
+  text-align: justify;
+}
+
+.investigations{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding-top: 2rem;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.login-page{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--main-background-color);
+}
+
+.logo{
+  filter: brightness(0) invert(1);
+}
+
+.logs{
+  height: 90%;
+  overflow: auto;
+}
+
+.logs-accordion {
+  align-items: center;
+  background-color: #eee;
+  color: #444;
+  cursor: pointer;
+  display: flex;
+  gap: 0.5rem;
+  padding: 18px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  outline: none;
+  transition: 0.4s;
+}
+.active, .logs-accordion:hover {
+  background-color: #ccc;
+}
+.logs-accordion:after {
+  content: '\02795';
+  font-size: 13px;
+  color: #777;
+  float: right;
+  margin-left: 5px;
+}
+.active:after {
+  content: "\2796";
+}
+.logs-accordion img{
+  height: 24px;
+  width: 24px;
+}
+
+.logs-panel {
+  padding: 0 18px;
+  background-color: white;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+}
+
+.no-contributions{
+  text-align: center;
+}
+.no-contributions a{
+  color: black;
+}
+
+.no-logs{
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  font-size: 2rem;
+  font-weight: bold;
+  height: 100%;
+  justify-content: center;
+}
+
+.spacer{
+  min-height: 50px;
+}
+
+.start{
+  background-color: hsl(130, 60%, 30%);
+}
+.start:disabled, .start:hover{
+  background-color: hsl(130, 60%, 20%);
+}
+
+.status{
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+.status img{
+  height: 20px;
+  width: 20px;
+}
+
+.status-bar{
+  background-color: var(--main-background-color);
+  bottom: 0;
+  color: white;
+  display: flex;
+  flex-wrap: wrap;
+  font-weight: bold;
+  gap: 2rem;
+  padding: 0.5rem;
+  position: fixed;
+  width: calc(100% - 1rem);
+}
+
+.stop{
+  background-color: hsl(0, 60%, 45%);
+}
+.stop:disabled, .stop:hover{
+  background-color: hsl(0, 60%, 30%);
+}
+
+.subtitle{
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.title{
+  font-weight: bold;
+  font-size: 5rem;
+  color: white;
+}
+
+.top-bar{
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  padding: 0 2rem;
+  padding-top: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .intro{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+  }
+  .intro > img{
+    display: none;
+  }
+
+  .investigation-element > img{
+    width: 42vw;
+  }
+
+  .investigations{
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .title{
+    font-size: 4rem;
+  }
+}
+
+@media (max-width: 550px){
+
+  footer{
+    padding-bottom: calc(100px + 2rem);
+  }
+
+  nav{
+    flex-direction: column;
+  }
+
+  .intro{
+    padding: 1rem;
+  }
+
+  .investigation-element > img{
+    width: 80vw;
+  }
+
+  .investigations{
+    grid-template-columns: 1fr;
+  }
+
+  .title{
+    font-size: 3rem;
+  }
+
+  .top-bar{
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    padding-bottom: 0;
+  }
+}
