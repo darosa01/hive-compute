@@ -1,296 +1,364 @@
-const mysql = require('mysql');
-const fs = require('fs');
 const bcrypt = require('bcrypt');
-const crypto = require('crypto');
-const path = require('path');
+// const crypto = require('crypto');
+// crypto.randomUUID()
 
-var con = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "research"
-});
+const { Datastore } = require('@google-cloud/datastore');
+const { Storage } = require('@google-cloud/storage');
 
-con.connect(function(err) {
-  if (err) throw err;
-  console.log("INFO: Connected to DB!");
-});
+class Database{
 
-function addEntityUser(userData){
+  #bucketName;
+  #datastore;
+  #storage;
+  #taskDistributionMethod;
 
-  const saltRounds = 12;
+  constructor(){
+    this.#bucketName = 'hive-compute.appspot.com';
+    this.#datastore = new Datastore();
+    this.#storage = new Storage();
+    this.#taskDistributionMethod = "fair";
+  }
 
-  return new Promise((resolve, reject) => {
-    bcrypt.hash(userData.password, saltRounds).then(hash => {
-      var sqlSentence = "INSERT INTO entitiesUsers (name, surname, email, role, entity, password) VALUES (" + con.escape(userData.name) + ", " + con.escape(userData.surname) + ", " + con.escape(userData.email) + ", " + con.escape(userData.role) + ", " + con.escape(userData.entity) + ", " + hash + ")";
-      con.query(sqlSentence, function (err, result, fields) {
-        if(err){
-          console.error(err);
-          reject();
-        } else {
-          resolve();
-        }
-      });
-    }).catch(error => {
-      console.error(error.message);
-      reject();
-    });
-  });
-}
+  checkAdmin(email, password){
+    return new Promise((resolve, reject) => {
+      const kind = "admin";
+      const adminKey = this.#datastore.key([kind, email]);
 
-function addProject(userEmail, projectData, imagePath){
-  return new Promise((resolve, reject) => {
-    var sqlSentence = `
-    INSERT INTO projects (title, text, url, image, projectKey, entity) 
-    VALUES (` + con.escape(projectData.title) + `, 
-    ` + con.escape(projectData.text) + `, 
-    ` + con.escape(projectData.url) + `, 
-    ` + con.escape(imagePath) + `, 
-    '` + crypto.randomUUID() + `', (
-      SELECT entity
-      FROM entitiesusers
-      WHERE email = ` + con.escape(userEmail) + `
-    ));
-    `;
-    con.query(sqlSentence, function (err, result, fields) {
-      if(err){
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  });
-}
-
-function addTask(){
-
-}
-
-function addUser(userId){
-  return new Promise((resolve, reject) => {
-    var sqlSentence = "INSERT INTO users (userId) VALUES (" + con.escape(userId) + ")";
-    con.query(sqlSentence, function (err, result, fields) {
-      if(err){
-        reject();
-      } else {
-        resolve();
-      }
-    });
-  });
-}
-
-function banUser(seconds){
+      this.#datastore.get(adminKey).then(data => {
+        const userData = data[0];
+        if(userData){
+          const passwordHash = userData.password;
   
-}
+          bcrypt.compare(password, passwordHash).then(isCorrect => {
+            if(isCorrect){
+              this.#removeOldSessions(); 
 
-function checkEntityUser(email, password){
-  return new Promise((resolve, reject) => {
-    var sqlSentence = "SELECT name, email, role, password FROM entitiesUsers WHERE email = " + con.escape(email);
-    con.query(sqlSentence, function (err, result, fields) {
-      if (err) reject(err);
-
-      if(Object.keys(result).length < 1){
-        resolve(null);
-      } else {
-        var passwordHash = result[0].password;
-        bcrypt.compare(password, passwordHash).then(isCorrect => {
-          if(isCorrect){
-            resolve({
-              name: result[0].name,
-              email: result[0].email,
-              role: result[0].role
-            });
-          } else {
-            resolve(null);
-          }
-        }).catch(err => console.error(err.message));
-      }
-    });
-  });
-}
-
-function checkUser(userId){
-  return new Promise((resolve, reject) => {
-    var sqlSentence = "SELECT banTime FROM users WHERE userId = " + con.escape(userId);
-    con.query(sqlSentence, function (err, result, fields) {
-      if (err) reject(err);
-
-      if(Object.keys(result).length < 1){
-        addUser(userId).then(ok => {
-          // if user just created --> allow access
-          resolve(false);
-        }).catch(err => {
-          // if user can't be added -> forbid access
-          resolve(true);
-        });
-      } else {
-        var banTime = new Date(result[0].banTime);
-        var currentDate = new Date();
-        if(banTime > currentDate){
-          // if banTime still active --> forbid access
-          resolve(true);
+              resolve({
+                name: userData.name,
+                surname: userData.surname ?? "",
+                email: userData.email
+              });
+            } else {
+              resolve(null);
+            }
+          }).catch(reject);
         } else {
-          // if banTime expired --> allow access
-          resolve(false);
+          resolve(null)
+        }
+      }).catch(reject);
+    });
+  }
+
+  checkInvestigator(email, password){
+    return new Promise((resolve, reject) => {
+      const kind = "researcher";
+      const researcherKey = this.#datastore.key([kind, email]);
+
+      this.#datastore.get(researcherKey).then(data => {
+        const userData = data[0];
+        if(userData){
+          const passwordHash = userData.password;
+  
+          bcrypt.compare(password, passwordHash).then(isCorrect => {
+            if(isCorrect){
+              this.#removeOldSessions(); 
+
+              resolve({
+                name: userData.name,
+                surname: userData.surname ?? "",
+                email: userData.email,
+                entity: userData.entity
+              });
+            } else {
+              resolve(null);
+            }
+          }).catch(reject);
+        } else {
+          resolve(null)
+        }
+      }).catch(reject);
+    });
+  }
+
+  createAdmin(adminData){
+    return new Promise((resolve, reject) => {
+      const kind = "admin";
+      const adminKey = this.#datastore.key([kind, adminData.email]);
+  
+      const newPassword = this.#generatePassword();
+  
+      const admin = {
+        key: adminKey,
+        data: {
+          name: adminData.name,
+          surname: adminData.surname,
+          password: newPassword.hash,
+          email: adminData.email
         }
       }
+  
+      this.#datastore.save(admin).then(() => {
+        resolve(newPassword.password);
+      }).catch(reject);
     });
-  });
-}
+  }
+  
+  createProject(projectData){
+    return new Promise((resolve, reject) => {
+      const kind = "project";
+      const projectKey = this.#datastore.key([kind]);
 
-function getContributions(userId){
-  return new Promise((resolve, reject) => {
-    var sqlSentence = `
-    SELECT title, text, url, image
-    FROM projects
-    WHERE id IN (
-        SELECT project
-        FROM tasks
-        WHERE id IN (
-            SELECT task 
-            FROM executions
-            WHERE user IN (
-                SELECT id
-                FROM users
-                WHERE userId = ` + con.escape(userId) + `
-            )
-        )
-    )
-    `;
-    con.query(sqlSentence, function (err, result, fields) {
-      if (err) reject(err);
+      const project = {
+        key: projectKey,
+        data: projectData
+      }
 
-      var contributions = [];
-      result.forEach(element => {
-        contributions.push(element);
-      });
-      resolve(contributions);
+      this.#datastore.save(project).then(resolve).catch(reject);
     });
-  });
-}
+  }
 
-function getMyProjects(email){
-  return new Promise((resolve, reject) => {
-    var sqlSentence = `
-    SELECT title, text, url, image, projectKey
-    FROM projects
-    WHERE entity IN (
-      SELECT entity
-      FROM entitiesusers
-      WHERE email = ` + con.escape(email) + `
-    )
-    `;
-    con.query(sqlSentence, function (err, result, fields) {
-      if (err) reject(err);
-      resolve(result);
+  createResearcher(researcherData){
+    return new Promise((resolve, reject) => {
+      const kind = "researcher";
+      const researcherKey = this.#datastore.key([kind, researcherData.email]);
+  
+      const newPassword = this.#generatePassword();
+  
+      const researcher = {
+        key: researcherKey,
+        data: {
+          name: researcherData.name,
+          surname: researcherData.surname,
+          password: newPassword.hash,
+          email: researcherData.email,
+          entity: researcherData.entity
+        }
+      }
+  
+      this.#datastore.save(researcher).then(() => {
+        resolve(newPassword.password);
+      }).catch(reject);
     });
-  });
-}
+  }
 
-function getProjectTasks(email, projectKey){
-  console.log(projectKey);
-  return new Promise((resolve, reject) => {
-    var isAllowed = false;
+  createTask(entity, taskData){
+    return new Promise((resolve, reject) => {
 
-    var sqlSentence = `
-    SELECT title
-    FROM projects
-    WHERE entity IN (
-      SELECT entity
-      FROM entitiesusers
-      WHERE email = ` + con.escape(email) + `
-    ) AND projectKey = ` + con.escape(projectKey) + `
-    `;
-    con.query(sqlSentence, function (err, result, fields) {
-      if (err) reject(err);
-      console.log(result);
-    });
-  });
-}
+      const projectKey = this.#datastore.key(["project", taskData.project]);
 
-/**
- *  SQL Sentence -> Limit task executions
- * 
- * SELECT t.name, t.code
- * FROM tasks as t
- * LEFT JOIN executions as e ON t.id=e.task
- * GROUP BY t.id
- * HAVING COUNT(t.id) < (SELECT configValue FROM config WHERE configKey = 'executionRepetitions')
- * ORDER BY COUNT(t.id)
- * LIMIT 1;
- */
+      this.#datastore.get(projectKey).then(data => {
+        const projectData = data[0];
 
-/**
- *  SQL Sentence -> Limit task executions and not allow user task repetition
- * 
- * SELECT t.name as name, t.code as code
- * FROM tasks as t
- * LEFT JOIN executions as e ON t.id=e.task
- * WHERE t.id NOT IN (SELECT distinct t.id
- * FROM tasks as t 
- * LEFT JOIN executions as e ON t.id=e.task 
- * WHERE e.user = (SELECT id FROM users WHERE userId = 'cb99b830-b2b9-4c76-a51a-26afba3a61ef'))
- * GROUP BY t.id
- * HAVING COUNT(t.id) < (SELECT configValue FROM config WHERE configKey = 'executionRepetitions')
- * ORDER BY COUNT(t.id)
- * LIMIT 1;
- */
-
-function getNewTask(userId){
-  return new Promise((resolve, reject) => {
-    // Es selecciona la tasca amb menys execucions i que no hagi superat el numero d'execucions requerit.
-    // Un mateix usuari no pot fer la mateixa tasca dues vegades.
-    var sqlSentence = 
-    `
-    SELECT t.code as code, t.taskKey as taskKey
-    FROM tasks as t
-    LEFT JOIN executions as e ON t.id=e.task
-    WHERE t.id NOT IN (SELECT distinct t.id
-	  FROM tasks as t 
-	  LEFT JOIN executions as e ON t.id=e.task 
-	  WHERE e.user = (SELECT id FROM users WHERE userId = ` + con.escape(userId) + `))
-    GROUP BY t.id
-    HAVING COUNT(t.id) < (SELECT configValue FROM config WHERE configKey = 'executionRepetitions')
-    ORDER BY COUNT(t.id)
-    LIMIT 1;
-    `;
-    con.query(sqlSentence, function (err, result, fields) {
-      if (err) reject(err);
-
-      if(Object.keys(result).length < 1){
-        resolve(null);
-      } else {
-
-        var task = {
-          codeUrl: result[0].code + "postMessage(compute());",
-          taskKey: result[0].taskKey
+        if(projectData.entity !== entity){
+          return reject("Error creating task: not your project.");
         }
 
-        resolve(task);
-      }
+        const kind = "task";
+        const taskKey = this.#datastore.key([kind]);
+  
+        const task = {
+          key: taskKey,
+          data: taskData
+        }
+  
+        this.#datastore.save(task).then(resolve).catch(reject);
+      }).catch(reject);
     });
-  });
-}
+  }
 
-function getTaskWasm(taskId){
-  // Idealment els fitxers s'emmagatzemen, per exemple, a Google Cloud Storage
+  createUser(userId){
+    return new Promise((resolve, reject) => {
+      const kind = "user";
+      const userKey = this.#datastore.key([kind, userId]);
+  
+      const user = {
+        key: userKey,
+        data: {
+          userId: userId,
+          lastSeen: new Date()
+        }
+      }
+  
+      this.#datastore.save(user).then(resolve).catch(reject);
+    });
+  }
 
-  const filePath = path.join(path.dirname(__filename), 'wasm-tasks', (taskId + '.wasm'));
-  return fs.readFile(filePath);
-}
+  deleteResearcher(email){
+    return new Promise((resolve, reject) => {
+      const transaction = this.#datastore.transaction();
+      const userKey = this.#datastore.key(['researcher', email]);
 
-function submitExecution(execution){
-  return new Promise((resolve, reject) => {
-    var sqlSentence = "INSERT INTO executions (user, task, result) VALUES ((SELECT id FROM users WHERE userId = " + con.escape(execution.userId) + "), (SELECT id FROM tasks WHERE name = " + con.escape(execution.taskId) + "), " + con.escape(execution.result) + ")";
+      try {
+        transaction.run().then(() => {
+          transaction.delete(userKey).then(() => {
+            // Delete user cookie to prevent future actions
+            const querySessions = transaction.createQuery('express-sessions');
+            transaction.runQuery(querySessions).then(data => {
+              const sessionList = data[0];
+              var sessionsToRemove = [];
     
-    con.query(sqlSentence, function (err, result, fields) {
-      if (err){
+              sessionList.forEach(session => {
+                var sessionData = JSON.parse(session.data);
+                if(sessionData.user.email == email){
+                  sessionsToRemove.push(session[this.#datastore.KEY].name);
+                }
+              });
+    
+              var sessionPromises = [];
+    
+              sessionsToRemove.forEach(sessionId => {
+                var sessionKey = this.#datastore.key(['express-session', sessionId]);
+                sessionPromises.push(transaction.delete(sessionKey));
+              });
+    
+              Promise.all(sessionPromises).then(() => {
+                transaction.commit().then(resolve).catch(reject);
+              });
+            });
+          });
+        });
+      } catch (err) {
+        transaction.rollback();
         reject(err);
-      } else {
-        resolve();
       }
     });
-  });
+  }
+
+  #generatePassword(){
+    const saltRounds = 12;
+
+    const newPassword = Math.random().toString(36).slice(-8);
+    const hash = bcrypt.hashSync(newPassword, saltRounds);
+
+    return {
+      password: newPassword,
+      hash: hash
+    }
+  }
+
+  getContributions(userId){
+    return new Promise((resolve, reject) => {
+      var query = this.#datastore.createQuery('execution').filter('user', '=', userId);
+      this.#datastore.runQuery(query).then(data => {
+        var tasks = data[0].map(a => a.task);
+        const uniqueTasks = [...new Set(tasks)];
+
+        if(uniqueTasks.length < 1){
+          return resolve([]);
+        }
+
+        var query = this.#datastore.createQuery('task').filter('name', 'IN', uniqueTasks);
+        this.#datastore.runQuery(query).then(data => {
+          var projects = data[0].map(a => a.project);
+          const uniqueProjects = [...new Set(projects)];
+
+          var query = this.#datastore.createQuery('project').filter('name', 'IN', uniqueProjects);
+          this.#datastore.runQuery(query).then(data => {
+            resolve(data);
+          }).catch(reject);
+        }).catch(reject);
+      }).catch(reject);
+    });
+  }
+
+  getMyProjects(entity){
+    return new Promise((resolve, reject) => {
+      var query = this.#datastore.createQuery('project').filter('entity', '=', entity);
+      this.#datastore.runQuery(query).then(data => {
+        resolve(data);
+      }).catch(reject);
+    });
+  }
+
+  async getNewTask(){
+    var query = this.#datastore.createQuery('config');
+    var config = await this.#datastore.runQuery(query);
+
+    query = this.#datastore.createQuery('task');
+    var tasks = await this.#datastore.runQuery(query);
+
+    query = this.#datastore.createQuery('execution');
+    var executions = await this.#datastore.runQuery(query);
+
+    const executionsPerTask = Object.entries(executions.reduce((acc, { task }) => {
+      acc[task] = (acc[task] || 0) + 1;
+      return acc;
+    }, {})).map( ([k,v]) => ({task: parseInt(k,10), count: v}));
+
+    switch(this.#taskDistributionMethod){
+      case 'fair':
+        return this.#fairTaskDistribution(config, executionsPerTask, tasks);
+      case 'none':
+        return;
+    }
+  }
+
+  #removeOldSessions(){
+    return new Promise((resolve, reject) => {
+      const querySessions = this.#datastore.createQuery('express-sessions');
+      this.#datastore.runQuery(querySessions).then(data => {
+        const sessionList = data[0];
+        var sessionsToRemove = [];
+  
+        var currentDate = new Date();
+  
+        sessionList.forEach(session => {
+          var sessionData = JSON.parse(session.data);
+          if(new Date(sessionData.cookie.expires) < currentDate){
+            sessionsToRemove.push(session[this.#datastore.KEY].name);
+          }
+        });
+  
+        var sessionPromises = [];
+  
+        sessionsToRemove.forEach(sessionId => {
+          var sessionKey = this.#datastore.key(['express-session', sessionId]);
+          sessionPromises.push(this.#datastore.delete(sessionKey));
+        });
+  
+        Promise.all(sessionPromises).then(resolve).catch(reject);
+      }).catch(reject);
+    });
+  }
+
+  submitExecution(executionData){
+    return new Promise((resolve, reject) => {
+      const kind = "execution";
+      const executionKey = this.#datastore.key([kind]);
+
+      const execution = {
+        key: executionKey,
+        data: executionData
+      }
+
+      this.#datastore.save(execution).then(resolve).catch(reject);
+    });
+  }
+
+  // Task distribution methods
+
+  #fairTaskDistribution(config, executionsPerTask, tasks){
+
+    const nonExecutedTasks = tasks.filter(x => {
+      return !executionsPerTask.some(e => e.task === x);
+    });
+
+    nonExecutedTasks.forEach(t => {
+      executionsPerTask.push({
+        task: t,
+        count: 0
+      });
+    });
+
+    // Sort tasks by executed times (less executions first)
+    executionsPerTask.sort((a,b) => a.count - b.count);
+
+    if(executionsPerTask.length < 1 || executionsPerTask[0].count >= config.executionRepetition){
+      return null;
+    }
+
+    return tasks.find(t => t[this.#datastore.KEY].name == executionsPerTask[0].task);
+  }
 }
 
-module.exports = { addEntityUser, addProject, addTask, checkEntityUser, checkUser, getContributions, getMyProjects, getProjectTasks, getNewTask, submitExecution }
+export { Database }

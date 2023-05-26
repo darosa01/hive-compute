@@ -1,5 +1,5 @@
 {
-  "name": "research-associate",
+  "name": "hive-compute",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -9,16 +9,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/darosa01/research-associate.git"
+    "url": "git+https://github.com/darosa01/hive-compute.git"
   },
   "keywords": [],
   "author": "David Romero Sanchez",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/darosa01/research-associate/issues"
+    "url": "https://github.com/darosa01/hive-compute/issues"
   },
-  "homepage": "https://github.com/darosa01/research-associate#readme",
+  "homepage": "https://github.com/darosa01/hive-compute#readme",
   "dependencies": {
+    "@google-cloud/connect-datastore": "^6.0.1",
+    "@google-cloud/storage": "^6.10.1",
     "bcrypt": "^5.1.0",
     "express": "^4.18.2",
     "express-session": "^1.17.3",

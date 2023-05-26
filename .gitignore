@@ -131,3 +131,6 @@ dist
 
 # Google App Engine generated folder
 appengine-generated/
+
+# Custom WASM test files
+wasm-test/
