@@ -1,59 +1,48 @@
-var crypto = require('crypto');
 const express = require('express');
-const fs = require('fs');
 const multer = require('multer');
-const path = require('path');
 const router = express.Router();
-const db = require('./database.js');
 
-const storage = multer.diskStorage(
-  {
-    destination: './src/uploads/',
-    filename: function ( req, file, callback ) {
-      let ext = path.extname(file.originalname);
-      callback(null, crypto.randomUUID() + ext);
-    }
-  }
-);
+const Database = require('./database');
+
+const db = new Database();
 
 const upload = multer({
-  storage: storage,
-  fileFilter: function (req, file, callback) {
-    var ext = path.extname(file.originalname);
-    if(ext !== '.png' && ext !== '.jpg' && ext !== '.jpeg') {
-      return callback(new Error('Only JPG and PNG images are allowed'));
-    }
-    callback(null, true);
-  },
+  storage: multer.memoryStorage(),
   limits:{
-    fileSize: 1024 * 1024 * 5
+    fileSize: 1024 * 1024 * 100 // 100MB
   }
 });
 
 router.use(function checkSession(req, res, next){
   if(req.session.user !== undefined || req.url == "/login" || req.url == "/login-error"){
     next();
+  } else if (req.url == '/'){
+    res.redirect('/entities/login');
   } else{
-    res.redirect("/entities/login");
+    res.status(403).end();
   }
 });
 
 router.get("/", function(req, res){
-  res.sendFile(__dirname + "/admin_pages/index.html");
+  res.sendFile(__dirname + "/entities_pages/index.html");
 });
 
 router.post("/addProject", upload.single('image'), function(req, res){
   if(!req.file || !req.body.title || !req.body.text || !req.body.url){
     res.status(400).end();
   }
-  const userEmail = req.session.user.email;
+  const entity = req.session.user.entity;
   const projectData = req.body;
-  const imagePath = "/uploads/" + req.file.filename;
-  db.addProject(userEmail, projectData, imagePath).then(ok => {
+  const imageBuffer = req.file.buffer;
+  const imageName = req.file.originalname;
+  const image = {
+    name: imageName,
+    buffer: imageBuffer
+  }
+  db.addProject(projectData, image, entity).then(() => {
     res.status(200).end();
   }).catch(err => {
     console.log(err);
-    fs.unlink(req.file.path, () => {});
     res.status(500).end();
   });
 });
@@ -82,11 +71,8 @@ router.get("/login", function(req, res){
   if(req.session.user !== undefined){
     res.redirect("/entities");
   } else {
-    res.sendFile(__dirname + "/admin_pages/login.html");
+    res.sendFile(__dirname + "/entities_pages/login.html");
   }
-});
-router.get("/login-error", function(req, res){
-  res.sendFile(__dirname + "/admin_pages/login-error.html");
 });
 
 router.post("/login", function(req, res){
@@ -95,12 +81,12 @@ router.post("/login", function(req, res){
   } else {
     var email = req.body.email;
     var password = req.body.password;
-    db.checkEntityUser(email, password).then(userData => {
+    db.checkUser (email, password).then(userData => {
       if(userData !== null){
         req.session.user = userData;
         res.redirect("/entities");
       } else {
-        res.redirect("/entities/login-error");
+        res.sendFile(__dirname + "/entities_pages/login-error.html");
       }
     });
   }

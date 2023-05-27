@@ -15,6 +15,17 @@ header{
   gap: 2rem;
   padding: 1rem 2rem;
 }
+header > div{
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+header > div > div{
+  font-size: 2rem;
+  font-weight: bold;
+}
 
 textarea{
   overflow-y: scroll;
@@ -121,7 +132,8 @@ textarea{
 }
 
 .logo{
-  width: 6rem;
+  height: 120px;
+  width: 120px;
   cursor: pointer;
 }
 

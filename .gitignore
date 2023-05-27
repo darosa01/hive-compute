@@ -134,3 +134,6 @@ appengine-generated/
 
 # Custom WASM test files
 wasm-test/
+
+# Prevent mail credentials to be uploaded
+mail-credentials.js

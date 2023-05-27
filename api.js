@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const db = require('./database.js');
+//const db = require('./database.js');
+//import { Database } from './database.js';
+const Database = require('./database');
+
+const db = new Database();
 
 /**
  * TEST userID -> 6a58164f-cc02-4885-9292-0acaee941324
@@ -26,15 +30,10 @@ router.use(function checkUser(req, res, next) {
   if(userId === undefined){
     res.status(403).end();
   } else {
-    db.checkUser(userId).then(isBanned => {
-      if(isBanned){
-        // Return 403 Forbidden
-        res.status(403).end();
-      } else {
-        next();
-      }
-    }).catch(err => { 
-      console.log(err);
+    db.updateLastSeen(userId).then(() => {
+      next();
+    }).catch(err => {
+      console.error(err);
       res.status(500).end();
     });
   }
@@ -57,8 +56,6 @@ router.get('/getContributions', function(req, res) {
     console.log(err);
     res.status(500).end();
   });
-
-  //res.json(sampleContributions());
 });
 
 router.get('/getNewTask', function(req, res) {
@@ -71,23 +68,12 @@ router.get('/getNewTask', function(req, res) {
   });
 });
 
-router.get('/getTaskWasm', function(req, res) {
-  var taskId = req.get('Task-Id');
-
-  db.getTaskWasm(taskId).then(wasm => {
-    res.send(wasm).end();
-  }).catch(err => {
-    console.log(err);
-    res.status(500).end();
-  });
-});
-
 router.post('/submitCompletedTask', function(req, res) {
   var userId = req.get('User-Id');
   var execution = req.body;
 
   db.submitExecution({
-    taskId: execution.taskId,
+    task: execution.task,
     userId: userId,
     result: execution.result
   }).then(() => {

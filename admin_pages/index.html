@@ -6,17 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/assets/css/style-entities.css">
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <title>Entities</title>
+  <title>Admin - HiveCompute</title>
 </head>
 <body>
   <div id="app"></div>
   <script>
     const mainPage = {
       emits: ['changePage'],
-      props: ['userName'],
+      props: ['userName', 'entityName'],
       data: function() {
         return {
-          
+          userNumber: 0,
+          adminNumber: 0
         }
       },
       template: 
@@ -24,170 +25,83 @@
       <main class="main-section dashboard">
         <div class="welcome-text">Welcome, {{userName}}!</div>
         <section class="main-board">
-          <div class="main-card selectable" @click="$emit('changePage', 4)">
-            <div>You have</div>
-            <div class="main-card-number">8</div>
-            <div>projects</div>
+          <div class="main-card selectable" @click="$emit('changePage', 2)">
+            <div>There are</div>
+            <div class="main-card-number">{{userNumber}}</div>
+            <div>users</div>
           </div>
-          <div class="main-card selectable" @click="$emit('changePage', 3)">
-            <div>You have</div>
-            <div class="main-card-number">16</div>
-            <div>tasks</div>
+          <div class="main-card">
+            <div>There are</div>
+            <div class="main-card-number">{{adminNumber}}</div>
+            <div>admins</div>
           </div>
           <div class="main-card">
             <div>Your current</div>
             <div>organization is</div>
-            <div class="bold">UAB</div>
+            <div class="bold">{{entityName}}</div>
           </div>
         </section>
       </main>
       `,
       methods: {
         
+      },
+      mounted(){
+        fetch('/admin/getNumbers').then(res => res.json()).then(data => {
+          this.userNumber = data.researchers;
+          this.adminNumber = data.admins;
+        }).catch(console.error);
       }
     };
 
-    const addTask = {
+    const addUser = {
       data: function() {
         return {
-          file: null,
-          hideTextarea: false,
-          language: "",
-          project: "",
-          textCode: "",
-          title: ""
+          name: "",
+          surname: "",
+          email: "",
+          isAdmin: false
         }
       },
-      template: 
-      `
-      <main class="main-section">
-        <div class="section-title">Add Task</div>
-        <div class="form">
-          <input type="text" placeholder="Write a title to quickly identify the task">
-          <textarea class="code-textarea" v-model="textCode" v-if="!hideTextarea" autocorrect="off" placeholder="Press the upload button or paste your code here..." spellcheck="false"></textarea>
-          <div class="task-form-grid">
-            <div class="task-form-input-group">
-              <div>
-                <span>Project: </span>
-                <select id="projects-list" v-model="project"></select>
-              </div>
-              <div>
-                <span>Language: </span>
-                <select id="languages-list" v-model="language">
-                  <option value="JS">JavaScript</option>
-                  <option value="WASM">WebAssembly</option>
-                </select>
-              </div>
-            </div>
-            <div class="center">
-              <button>Upload file</button>
-            </div>
-            <div class="right">
-              <button class="submit-button" @click="submitTask">Create task</button>
-            </div>
-          </div>
-        </div>
-      </main>
-      `,
-      methods: {
-        getProjects: function(){
-          fetch("/entities/getMyProjects", {
-            method: "GET"
-          }).then(res => res.json()).then(projects => {
-            var projectsList = document.getElementById("projects-list");
-            projectsList.innerHTML = "";
-            projects.forEach(project => {
-              projectsList.innerHTML += ('<option value="' + project.projectKey + '">' + project.title + '</option>');
-            });
-            projectsList.value = "";
-          }).catch(err => console.log(err));
-        },
-        submitTask: function(){
-          // FALTA ACABAR !!!!
-          const form = new FormData();
-          form.append('title', this.title);
-          form.append('textCode', this.textCode);
-          form.append();
-          fetch("/entities/addTask", {
-            method: 'POST',
-            body: {
-              title: this.title,
-
+      emits: ['changePage'],
+      methods:{
+        createNewUser: function(){
+          var form = document.getElementById('user-form');
+          if(form.reportValidity()){
+            const newUser = {
+              name: this.name,
+              surname: this.surname,
+              email: this.email,
+              isAdmin: this.isAdmin
             }
-          })
-        }
-      },
-      watch: {
-        file(){
-          if(file){
-            this.hideTextarea = true;
-          } else {
-            this.hideTextarea = false;
+
+            fetch('/admin/createResearcher', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(newUser)
+            }).then(() => {
+              this.$emit('changePage', 2);
+            }).catch(console.log);
           }
         }
       },
-      mounted(){
-        this.getProjects();
-      }
-    };
-
-    const addProject = {
-      data: function() {
-        return {
-          title: "",
-          text: "",
-          url: "",
-          image: "",
-          actionDone: false,
-          actionError: false
-        }
-      },
-      methods:{
-        sendNewProject: function(){
-          const formData = new FormData();
-          formData.append("title", this.title);
-          formData.append("text", this.text);
-          formData.append("url", this.url);
-          formData.append("image", this.image);
-
-          fetch("/entities/addProject", {
-            method: 'POST',
-            body: formData
-          }).then(res => {
-            if(res.status == 200){
-              this.title = "";
-              this.text = "";
-              this.url = "";
-              this.image = "";
-              document.getElementById("image-input").value = null;
-              this.actionDone = true;
-            } else {
-              this.actionError = true;
-            }
-          }).catch(err => {
-            console.log(err);
-            this.actionError = true;
-          });
-        },
-        newImage: function(e){
-          this.image = e.target.files[0];
-        }
-      },
       template: 
       `
       <main class="main-section">
-        <div class="section-title">Add Project</div>
-        <div class="form standard-form">
-          <div>Project title:</div>
-          <input type="text" v-model="title" placeholder="Write the project title here...">
-          <div>Description:</div>
-          <textarea class="description-textarea" v-model="text" placeholder="Write a description of the project here..."></textarea>
-          <div>URL:</div>
-          <input type="text" v-model="url" placeholder="Write the project url here...">
-          <div>Image:</div>
-          <input type="file" id="image-input" @change="newImage">
-        </div>
-        <button class="submit-button" @click="sendNewProject">Create project</button>
+        <div class="section-title">Create user</div>
+        <form action="javascript:void(0)" class="form standard-form" id="user-form">
+          <div>Name:</div>
+          <input type="text" v-model="name" placeholder="Write the user name here..." required>
+          <div>Surname(s):</div>
+          <input type="text" v-model="surname" placeholder="Write the user surname(s) here..." required>
+          <div>Email:</div>
+          <input type="email" v-model="email" placeholder="Write the user email here..." required>
+          <div>Is an administrator?:</div>
+          <input type="checkbox" v-model="isAdmin">
+          <button class="submit-button" @click="createNewUser">Create user</button>
+        </form>
       </main>
       <div class="popup" v-if="actionDone || actionError">
         <div class="popup-element" v-if="actionDone">
@@ -202,110 +116,66 @@
       `
     };
 
-    const manageTasks = {
+    const manageUsers = {
       data: function() {
         return {
-          
+          users: []
         }
       },
+      emits: ['changePage', 'editUser'],
       template: 
       `
       <main class="main-section">
-        <div class="section-title">Manage Tasks</div>
-      </main>
-      `,
-      methods: {
-        getMyTasks: function(){
-
-        }
-      }
-    };
-
-    const manageProjects = {
-      data: function() {
-        return {
-          projects: []
-        }
-      },
-      emits: ['changePage', 'editProject'],
-      template: 
-      `
-      <main class="main-section">
-        <div class="section-title">Manage Projects</div>
-        <div class="add-project-button" @click="newProject">
-          + Add new project
+        <div class="section-title">Manage Users</div>
+        <div class="add-project-button" @click="newUser">
+          + Create new user
         </div>
         <div class="project-box">
-          <div class="project-card" v-for="project in projects" @click="editProject(project.projectKey)">
+          <div class="project-card" v-for="user in users" @click="editUser(user.email)">
             <img :src="project.image" alt="project image">
-            <div>{{project.title}}</div>
+            <div>{{user.name}} <b>{{user.surname}}</b></div>
           </div>
         </div>
       </main>
       `,
       methods: {
-        editProject: function(projectKey){
-          this.$emit('editProject', projectKey);
+        editProject: function(userEmail){
+          this.$emit('editUser', userEmail);
         },
-        getProjects: function(){
-          fetch("/entities/getMyProjects", {
-            method: "get"
-          }).then(res => res.json()).then(projects => {
-            this.projects = projects;
-          }).catch(err => console.log(err));
+        getUsers: function(){
+          fetch("/admin/getResearchers", {
+            method: "GET"
+          }).then(res => res.json()).then(users => {
+            this.users = users;
+          }).catch(console.log);
         },
-        newProject: function(){
-          this.$emit('changePage', 2);
+        newUser: function(){
+          this.$emit('changePage', 1);
         }
       },
       mounted(){
-        this.getProjects();
+        this.getUsers();
       }
     };
 
-    const editProject= {
+    const editUser = {
       data: function() {
         return {
           tasks: undefined
         }
       },
-      props: ['projectKey'],
+      props: ['userMail'],
       template: 
       `
       <main class="main-section">
-        <div class="section-title">Edit Project</div>
-      </main>
-      `,
-      methods: {
-        getProjectTasks: function(){
-          fetch("/entities/getProjectTasks", {
-            method: "POST",
-            body: JSON.stringify({projectKey: this.projectKey})
-          }).then(res => res.json()).then(tasks => {
-            this.tasks = tasks;
-          }).catch(err => console.log(err));
-        }
-      },
-      mounted(){
-        this.getProjectTasks();
-      }
-    };
-
-    const editTask= {
-      data: function() {
-        return {
-          
-        }
-      },
-      props: ['taskKey'],
-      template: 
-      `
-      <main class="main-section">
-        <div class="section-title">Edit Task</div>
+        <div class="section-title">Edit User</div>
       </main>
       `,
       methods: {
         
+      },
+      mounted(){
+
       }
     };
 
@@ -331,9 +201,23 @@
         return {
           page: 0,
           user: undefined,
-          userName: undefined,
+          entity: undefined,
           selectedProject: undefined,
           selectedTask: undefined
+        }
+      },
+      computed: {
+        entityName: function(){
+          if(this.entity){
+            return this.entity.name;
+          }
+          return "";
+        },
+        userName: function(){
+          if(this.user){
+            return this.user.name;
+          }
+          return "";
         }
       },
       methods: {
@@ -344,15 +228,14 @@
           this.selectedProject = projectKey;
           this.page = 6;
         },
-        editTask: function(taskKey){
-          this.selectedTask = taskKey;
-          this.page = 7;
-        },
         loadData: function(){
           fetch('/entities/getMyData').then(res => res.json()).then(userData => {
             this.user = userData;
-            this.userName = userData.name;
-          });
+          }).catch(console.error);
+
+          fetch('/admin/getEntityInfo').then(res => res.json()).then(data => {
+            this.entity = data;
+          }).catch(console.error);
         }
       },
       mounted(){
@@ -361,38 +244,31 @@
       template: 
       `
       <header>
-        <div>
-          <img src="/assets/img/collaborate.svg" alt="logo" class="logo" @click="page = 0">
+        <div @click="page = 0">
+          <img src="/assets/img/logo-hive.png" alt="logo" class="logo">
+          <div>HiveCompute - Admin</div>
         </div>
         <nav class="nav-links">
-          <div @click="page = 1">Add Task</div>
-          <div @click="page = 2">Add Project</div>
-          <div @click="page = 3">Tasks</div>
-          <div @click="page = 4">Projects</div>
+          <div @click="page = 1">Create user</div>
+          <div @click="page = 2">Manage users</div>
           <div @click="page = 5"><img src="/assets/img/person.svg" alt="profile"></div>
-          <a href="/entities/logout"><img src="/assets/img/logout.svg" alt="logout"></a>
+          <a href="/admin/logout"><img src="/assets/img/logout.svg" alt="logout"></a>
         </nav>
       </header>
-      <main-page v-if="page == 0" @change-page="changePage" :user-name="userName"></main-page>
-      <add-task v-if="page == 1"></add-task>
-      <add-project v-if="page == 2"></add-project>
-      <manage-tasks v-if="page == 3"></manage-tasks>
-      <manage-projects v-if="page == 4" @change-page="changePage" @edit-project="editProject"></manage-projects>
+      <main-page v-if="page == 0" @change-page="changePage" :user-name="userName" :entity-name="entityName"></main-page>
+      <add-user v-if="page == 1"></add-user>
+      <manage-users v-if="page == 2" @change-page="changePage" @edit-project="editProject"></manage-users>
       <profile-settings v-if="page == 5"></profile-settings>
-      <edit-project v-if="page == 6" :project-key="selectedProject"></edit-project>
-      <edit-task v-if="page == 7" :task-key="taskKey"></edit-task>
+      <edit-user v-if="page == 6" :user-email="selectedUser"></edit-project>
       `
     }
 
     var app = Vue.createApp(options);
     app.component('main-page', mainPage);
-    app.component('add-task', addTask);
-    app.component('add-project', addProject);
-    app.component('manage-tasks', manageTasks);
-    app.component('manage-projects', manageProjects);
+    app.component('add-user', addUser);
+    app.component('manage-users', manageUsers);
     app.component('profile-settings', profileSettings);
-    app.component('edit-project', editProject);
-    app.component('edit-task', editTask);
+    app.component('edit-user', editUser);
     const vm = app.mount("#app")
   </script>
 </body>

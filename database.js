@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 // const crypto = require('crypto');
 // crypto.randomUUID()
+const options = require('./options');
 
 const { Datastore } = require('@google-cloud/datastore');
 const { Storage } = require('@google-cloud/storage');
@@ -8,12 +9,14 @@ const { Storage } = require('@google-cloud/storage');
 class Database{
 
   #bucketName;
+  #config;
   #datastore;
   #storage;
   #taskDistributionMethod;
 
   constructor(){
     this.#bucketName = 'hive-compute.appspot.com';
+    this.#config = options;
     this.#datastore = new Datastore();
     this.#storage = new Storage();
     this.#taskDistributionMethod = "fair";
@@ -49,7 +52,7 @@ class Database{
     });
   }
 
-  checkInvestigator(email, password){
+  checkUser(email, password){
     return new Promise((resolve, reject) => {
       const kind = "researcher";
       const researcherKey = this.#datastore.key([kind, email]);
@@ -67,7 +70,8 @@ class Database{
                 name: userData.name,
                 surname: userData.surname ?? "",
                 email: userData.email,
-                entity: userData.entity
+                entity: userData.entity,
+                isAdmin: userData.isAdmin ?? false
               });
             } else {
               resolve(null);
@@ -102,18 +106,40 @@ class Database{
       }).catch(reject);
     });
   }
+
+  createEntity(entityData){
+
+  }
   
-  createProject(projectData){
+  createProject(projectData, projectImage, entity){
     return new Promise((resolve, reject) => {
       const kind = "project";
       const projectKey = this.#datastore.key([kind]);
 
-      const project = {
-        key: projectKey,
-        data: projectData
-      }
+      projectData.entity = entity;
 
-      this.#datastore.save(project).then(resolve).catch(reject);
+      const extension = projectImage.name.split('.').at(-1);
+
+      var destFileName = "image-" + crypto.randomUUID() + "." + extension;
+
+      projectData.imageName = destFileName;
+      
+      this.#storage.bucket(this.#bucketName).file(destFileName).save(projectImage.buffer).then(() => {
+        const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
+
+        fileRef.getSignedUrl({
+          action: "read"
+        }).then(imageUrl => {
+          projectData.imageUrl = imageUrl;
+  
+          const project = {
+            key: projectKey,
+            data: projectData
+          }
+      
+          this.#datastore.save(project).then(resolve).catch(reject);
+        });
+      }).catch(reject);
     });
   }
 
@@ -183,6 +209,10 @@ class Database{
     });
   }
 
+  deleteProject(){
+    // TO DO !!!
+  }
+
   deleteResearcher(email){
     return new Promise((resolve, reject) => {
       const transaction = this.#datastore.transaction();
@@ -224,6 +254,10 @@ class Database{
     });
   }
 
+  deleteTask(){
+    // TO DO !!!
+  }
+
   #generatePassword(){
     const saltRounds = 12;
 
@@ -261,6 +295,16 @@ class Database{
     });
   }
 
+  getEntityInfo(entityId){
+    return new Promise((resolve, reject) => {
+      const entityKey = this.#datastore.key(['entity', this.#datastore.int(entityId)]);
+
+      this.#datastore.get(entityKey).then(data => {
+        resolve(data[0]);
+      }).catch(reject);
+    });
+  }
+
   getMyProjects(entity){
     return new Promise((resolve, reject) => {
       var query = this.#datastore.createQuery('project').filter('entity', '=', entity);
@@ -270,14 +314,11 @@ class Database{
     });
   }
 
-  async getNewTask(){
-    var query = this.#datastore.createQuery('config');
-    var config = await this.#datastore.runQuery(query);
-
-    query = this.#datastore.createQuery('task');
+  async getNewTask(userId){
+    var query = this.#datastore.createQuery('task');
     var tasks = await this.#datastore.runQuery(query);
 
-    query = this.#datastore.createQuery('execution');
+    var query = this.#datastore.createQuery('execution');
     var executions = await this.#datastore.runQuery(query);
 
     const executionsPerTask = Object.entries(executions.reduce((acc, { task }) => {
@@ -287,10 +328,37 @@ class Database{
 
     switch(this.#taskDistributionMethod){
       case 'fair':
-        return this.#fairTaskDistribution(config, executionsPerTask, tasks);
+        return this.#fairTaskDistribution(this.#config, executionsPerTask, tasks, userId);
       case 'none':
         return;
     }
+  }
+
+  getResearchers(entity, myMail){
+    return new Promise((resolve, reject) => {
+      const query = this.#datastore.createQuery('researcher').filter('entity', '=', entity);
+      this.#datastore.runQuery(query).then(data => {
+        const researchers = data[0].filter(r => r.email != myMail);
+
+        resolve(researchers);
+      }).catch(reject);
+    });
+  }
+
+  getUserNumbers(entity){
+    return new Promise((resolve, reject) => {
+      const query = this.#datastore.createQuery('researcher').filter('entity', '=', entity);
+      this.#datastore.runQuery(query).then(data => {
+        const admins = data[0].filter(r => r.isAdmin);
+
+        const numbers = {
+          researchers: data[0].length,
+          admins: admins.length
+        }
+
+        resolve(numbers);
+      }).catch(reject);
+    });
   }
 
   #removeOldSessions(){
@@ -335,6 +403,22 @@ class Database{
     });
   }
 
+  updateLastSeen(userId){
+    return new Promise((resolve, reject) => {
+      const userKey = this.#datastore.key(['user', userId]);
+
+      const user = {
+        key: userKey,
+        data: {
+          userId: userId,
+          lastSeen: new Date()
+        }
+      }
+
+      this.#datastore.save(user).then(resolve).catch(reject);
+    });
+  }
+
   // Task distribution methods
 
   #fairTaskDistribution(config, executionsPerTask, tasks){
@@ -353,12 +437,22 @@ class Database{
     // Sort tasks by executed times (less executions first)
     executionsPerTask.sort((a,b) => a.count - b.count);
 
-    if(executionsPerTask.length < 1 || executionsPerTask[0].count >= config.executionRepetition){
+    if(executionsPerTask.length < 1){
       return null;
     }
 
-    return tasks.find(t => t[this.#datastore.KEY].name == executionsPerTask[0].task);
+    for(let i=0; i < executionsPerTask.length; i++){
+      if(executionsPerTask[i].count >= config.executionRepetition){
+        return null;
+      }
+
+      // Prevents a user from running the same task multiple times
+      if(!executions.find(e => e.task === executionsPerTask[i].task && e.user === userId)){
+        return tasks.find(t => t[this.#datastore.KEY].name == executionsPerTask[0].task);
+      }
+    }
+    return null;
   }
 }
 
-export { Database }
+module.exports = Database;
