@@ -16,7 +16,10 @@ class Email{
 
   sendHTMLMail(to, subject, html){
     var mailOptions = {
-      from: 'admin@perseus.cat',
+      from: {
+        name: "HiveCompute Admin",
+        address: 'admin@perseus.cat'
+      },
       to: to,
       subject: subject,
       html: html
@@ -31,14 +34,13 @@ class Email{
     });
   }
 
-  sendWelcomeMail(email, password){
-    var subject = "User created - Your HiveCompute credentials";
+  sendResetMail(email, password){
+    var subject = "Password reset - Your HiveCompute credentials";
 
     var html = 
     `
-      <h1>Welcome to HiveCompute!</h1>
-      <p>You have been registered on the platform as a researcher.</p>
-      <p>To access your account, access the url <a href="https://hivecompute.perseus.cat/entities">"hivecompute.perseus.cat/entities"</a> and use your email and the following password:
+      <h1>Your password has been reset!</h1>
+      <p>To access your account, access the url <a href="https://hivecompute.perseus.cat/entities">hivecompute.perseus.cat/entities</a> and use your email and the following password:
       <b>` + password + `
       </b></p>
       <p>Remember to change the password the next time you use the platform.</p>
@@ -46,7 +48,25 @@ class Email{
       <small>This is an automatic email. Do not reply to this message. Thank you!</small>
     `;
 
-    this.sendMail(email, subject, html);
+    this.sendHTMLMail(email, subject, html);
+  }
+
+  sendWelcomeMail(email, password){
+    var subject = "User created - Your HiveCompute credentials";
+
+    var html = 
+    `
+      <h1>Welcome to HiveCompute!</h1>
+      <p>You have been registered on the platform as a researcher.</p>
+      <p>To access your account, access the url <a href="https://hivecompute.perseus.cat/entities">hivecompute.perseus.cat/entities</a> and use your email and the following password:
+      <b>` + password + `
+      </b></p>
+      <p>Remember to change the password the next time you use the platform.</p>
+      <hr>
+      <small>This is an automatic email. Do not reply to this message. Thank you!</small>
+    `;
+
+    this.sendHTMLMail(email, subject, html);
   }
 }
 

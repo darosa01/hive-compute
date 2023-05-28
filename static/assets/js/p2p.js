@@ -1,4 +1,4 @@
-import WebTorrent from 'https://esm.sh/webtorrent'
+// import WebTorrent from 'https://esm.sh/webtorrent'
 import { Database } from './database.js';
 
 class P2P {

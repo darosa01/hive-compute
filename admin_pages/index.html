@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="assets/img/logo-hive.png" type="image/x-icon">
   <link rel="stylesheet" href="/assets/css/style-entities.css">
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <title>Admin - HiveCompute</title>
@@ -17,7 +18,8 @@
       data: function() {
         return {
           userNumber: 0,
-          adminNumber: 0
+          adminNumber: 0,
+          isLoading: true
         }
       },
       template: 
@@ -42,14 +44,15 @@
           </div>
         </section>
       </main>
+      <div v-if="isLoading" class="popup">
+        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+      </div>
       `,
-      methods: {
-        
-      },
       mounted(){
         fetch('/admin/getNumbers').then(res => res.json()).then(data => {
           this.userNumber = data.researchers;
           this.adminNumber = data.admins;
+          this.isLoading = false;
         }).catch(console.error);
       }
     };
@@ -57,6 +60,8 @@
     const addUser = {
       data: function() {
         return {
+          actionDone: false,
+          actionError: false,
           name: "",
           surname: "",
           email: "",
@@ -65,6 +70,12 @@
       },
       emits: ['changePage'],
       methods:{
+        clearInputs: function(){
+          this.name = "";
+          this.surname = "";
+          this.email = "";
+          this.isAdmin = false;
+        },
         createNewUser: function(){
           var form = document.getElementById('user-form');
           if(form.reportValidity()){
@@ -82,8 +93,12 @@
               },
               body: JSON.stringify(newUser)
             }).then(() => {
-              this.$emit('changePage', 2);
-            }).catch(console.log);
+              this.actionDone = true;
+              this.clearInputs();
+            }).catch(err => {
+              console.log(err);
+              this.actionError = true;
+            });
           }
         }
       },
@@ -91,25 +106,33 @@
       `
       <main class="main-section">
         <div class="section-title">Create user</div>
-        <form action="javascript:void(0)" class="form standard-form" id="user-form">
-          <div>Name:</div>
-          <input type="text" v-model="name" placeholder="Write the user name here..." required>
-          <div>Surname(s):</div>
-          <input type="text" v-model="surname" placeholder="Write the user surname(s) here..." required>
-          <div>Email:</div>
-          <input type="email" v-model="email" placeholder="Write the user email here..." required>
-          <div>Is an administrator?:</div>
-          <input type="checkbox" v-model="isAdmin">
-          <button class="submit-button" @click="createNewUser">Create user</button>
+        <form action="javascript:void(0)" class="user-data-form" id="user-form">
+          <div>
+            <div>Name: </div>
+            <input type="text" v-model="name" required>
+          </div>
+          <div>
+            <div>Surname: </div>
+            <input type="text" v-model="surname" required>
+          </div>
+          <div>
+            <div>Email: </div>
+            <input type="email" v-model="email" required>
+          </div>
+          <div>
+            <div>Is an administrator: </div>
+            <input type="checkbox" id="admin-checkbox" v-model="isAdmin">
+          </div>
+          <button @click="createNewUser">Create user</button>
         </form>
       </main>
       <div class="popup" v-if="actionDone || actionError">
         <div class="popup-element" v-if="actionDone">
-          The project has been added successfully
+          The researcher has been added successfully.
           <div class="discrete-link" @click="actionDone = false">Close</div>
         </div>
         <div class="popup-element error" v-if="actionError">
-          An error occurred adding the project <br> Please try again
+          An error occurred adding the project. <br> Please try again.
           <div class="discrete-link" @click="actionError = false">Close</div>
         </div>
       </div>
@@ -119,10 +142,91 @@
     const manageUsers = {
       data: function() {
         return {
-          users: []
+          users: [],
+          selectedUser: {
+            name: "",
+            surname: "",
+            email: undefined
+          },
+          toAdmin: false,
+          deleting: false,
+          reseting: false,
+          isLoading: true
         }
       },
-      emits: ['changePage', 'editUser'],
+      emits: ['changePage'],
+      computed: {
+        orderedUsers: function(){
+          return this.users.sort((a,b) => (a.surname > b.surname) ? 1 : ((b.surname > a.surname) ? -1 : 0));
+        }
+      },
+      methods: {
+        getUsers: function(){
+          fetch("/admin/getResearchers", {
+            method: "GET"
+          }).then(res => res.json()).then(users => {
+            this.users = users;
+            this.isLoading = false;
+          }).catch(console.log);
+        },
+        newUser: function(){
+          this.$emit('changePage', 1);
+        },
+        adminConfirmation: function(user){
+          this.selectedUser = user;
+          this.toAdmin = true;
+        },
+        deleteConfirmation: function(user){
+          this.selectedUser = user;
+          this.deleting = true;
+        },
+        resetConfirmation: function(user){
+          this.selectedUser = user;
+          this.reseting = true;
+        },
+        toggleAdmin: function(){
+          fetch('/admin/toggleAdmin', {
+            method: 'POST',
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              email: this.selectedUser.email
+            })
+          }).then(() => {
+            this.getUsers();
+            this.toAdmin = false;
+          }).catch(console.error);
+        },
+        deleteUser: function(){
+          fetch('/admin/deleteResearcher', {
+            method: 'POST',
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              email: this.selectedUser.email
+            })
+          }).then(() => {
+            this.getUsers();
+            this.deleting = false;
+          }).catch(console.error);
+        },
+        resetPassword: function(){
+          fetch('/admin/resetResearcherPassword', {
+            method: 'POST',
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              email: this.selectedUser.email
+            })
+          }).then(() => {
+            this.getUsers();
+            this.reseting = false;
+          }).catch(console.error);
+        }
+      },
       template: 
       `
       <main class="main-section">
@@ -130,70 +234,140 @@
         <div class="add-project-button" @click="newUser">
           + Create new user
         </div>
-        <div class="project-box">
-          <div class="project-card" v-for="user in users" @click="editUser(user.email)">
-            <img :src="project.image" alt="project image">
+        <div class="users-box">
+          <div class="users-card" v-for="user in orderedUsers">
             <div>{{user.name}} <b>{{user.surname}}</b></div>
+            <div class="admin-badge" v-if="user.isAdmin">Admin</div>
+            <div class="users-button-group">
+              <img src="assets/img/key.svg" alt="reset password" title="Reset password" @click="resetConfirmation(user)">
+              <img src="assets/img/admin.svg" alt="change admin role" title="Add/remove admin role" @click="adminConfirmation(user)">
+              <img src="assets/img/delete.svg" alt="delete user" title="Delete user" @click="deleteConfirmation(user)">
+            </div>
           </div>
         </div>
       </main>
+      <div class="popup" v-if="toAdmin || deleting || reseting">
+        <div class="popup-element" v-if="toAdmin">
+          Are you sure you want to add/remove the admin role to the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b>?
+          <div class="confirmation-buttons">
+            <div @click="toggleAdmin()">Change admin role</div>
+            <div class="red-link" @click="toAdmin = false">Cancel</div>
+          </div>
+        </div>
+        <div class="popup-element error" v-if="deleting">
+          Are you sure you want to delete the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b>?
+          <div class="confirmation-buttons">
+            <div @click="deleteUser()">Delete user</div>
+            <div class="red-link" @click="deleting = false">Cancel</div>
+          </div>
+        </div>
+        <div class="popup-element" v-if="reseting">
+          Are you sure you want to reset the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b> password?
+          <div class="confirmation-buttons">
+            <div @click="resetPassword()">Reset password</div>
+            <div class="red-link" @click="reseting = false">Cancel</div>
+          </div>
+        </div>
+      </div>
+      <div v-if="isLoading" class="popup">
+        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+      </div>
       `,
-      methods: {
-        editProject: function(userEmail){
-          this.$emit('editUser', userEmail);
-        },
-        getUsers: function(){
-          fetch("/admin/getResearchers", {
-            method: "GET"
-          }).then(res => res.json()).then(users => {
-            this.users = users;
-          }).catch(console.log);
-        },
-        newUser: function(){
-          this.$emit('changePage', 1);
-        }
-      },
       mounted(){
         this.getUsers();
-      }
-    };
-
-    const editUser = {
-      data: function() {
-        return {
-          tasks: undefined
-        }
-      },
-      props: ['userMail'],
-      template: 
-      `
-      <main class="main-section">
-        <div class="section-title">Edit User</div>
-      </main>
-      `,
-      methods: {
-        
-      },
-      mounted(){
-
       }
     };
 
     const profileSettings= {
       data: function() {
         return {
-          
+          user: {
+            name: "",
+            surname: "",
+            email: ""
+          },
+          newPassword: "",
+          newPasswordRepetition: "",
+          passwordAlert: false,
+          isLoading: true
         }
+      },
+      emits: ['changePage'],
+      methods: {
+        getMyData: function(){
+          fetch('/entities/getMyData').then(res => res.json()).then(data => {
+            this.user = data;
+            this.isLoading = false;
+          }).catch(console.error);
+        },
+        updateData: function(){
+
+          var form = document.getElementById('user-data-form');
+
+          if(!form.reportValidity()){
+            return;
+          }
+
+          if(this.newPassword != this.newPasswordRepetition){
+            this.passwordAlert = true;
+            return;
+          } else {
+            this.passwordAlert = false;
+          }
+
+          if(this.newPassword != ""){
+            this.user.password = this.newPassword;
+          }
+
+          this.isLoading = true;
+
+          fetch('/entities/updateResearcherData', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(this.user)
+          }).then(() => {
+            this.$emit('changePage', 0);
+          }).catch(console.error);
+        }
+      },
+      mounted(){
+        this.getMyData();
       },
       template: 
       `
       <main class="main-section">
-        <div class="section-title">Profile Settings</div>
+        <div class="section-title">My profile</div>
+        <form action="javascript:void(0)" class="user-data-form" id="user-data-form">
+          <div>
+            <div>Name: </div>
+            <input type="text" v-model="user.name" required>
+          </div>
+          <div>
+            <div>Surname: </div>
+            <input type="text" v-model="user.surname" required>
+          </div>
+          <div>
+            <div>Email: </div>
+            <input type="text" v-model="user.email" readonly title="Email cannot be modified...">
+          </div>
+          <div>
+            <div>Password (only if you want to modify it): </div>
+            <input type="password" v-model="newPassword">
+          </div>
+          <div>
+            <div>Repeat the password: </div>
+            <input type="password" v-model="newPasswordRepetition">
+          </div>
+          <button @click="updateData()">Save changes</button>
+        </form>
+        <div v-if="passwordAlert" class="form-error">Passwords must match. Please check them and try again.</div>
       </main>
-      `,
-      methods: {
-        
-      }
+      <div v-if="isLoading" class="popup">
+        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+      </div>
+      `
     };
 
     let options = {
@@ -201,9 +375,7 @@
         return {
           page: 0,
           user: undefined,
-          entity: undefined,
-          selectedProject: undefined,
-          selectedTask: undefined
+          entity: undefined
         }
       },
       computed: {
@@ -223,10 +395,6 @@
       methods: {
         changePage: function(newPage){
           this.page = newPage;
-        },
-        editProject: function(projectKey){
-          this.selectedProject = projectKey;
-          this.page = 6;
         },
         loadData: function(){
           fetch('/entities/getMyData').then(res => res.json()).then(userData => {
@@ -257,9 +425,8 @@
       </header>
       <main-page v-if="page == 0" @change-page="changePage" :user-name="userName" :entity-name="entityName"></main-page>
       <add-user v-if="page == 1"></add-user>
-      <manage-users v-if="page == 2" @change-page="changePage" @edit-project="editProject"></manage-users>
-      <profile-settings v-if="page == 5"></profile-settings>
-      <edit-user v-if="page == 6" :user-email="selectedUser"></edit-project>
+      <manage-users v-if="page == 2" @change-page="changePage"></manage-users>
+      <profile-settings v-if="page == 5" @change-page="changePage"></profile-settings>
       `
     }
 
@@ -268,7 +435,6 @@
     app.component('add-user', addUser);
     app.component('manage-users', manageUsers);
     app.component('profile-settings', profileSettings);
-    app.component('edit-user', editUser);
     const vm = app.mount("#app")
   </script>
 </body>

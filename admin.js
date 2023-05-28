@@ -27,18 +27,26 @@ router.post("/createResearcher", function(req, res){
   var userData = req.body;
 
   if(userData){
+    userData.entity = req.session.user.entity;
     db.createResearcher(userData).then(password => {
-      email.sendWelcomeMail(userData, password).then(() => {
-        res.status(200).end();
-      }).catch(err => {
-        console.log(err);
-        res.status(500).end();
-      });
+      email.sendWelcomeMail(userData.email, password);
+      res.status(200).end();
     }).catch(err => {
       console.log(err);
       res.status(500).end();
     })
   }
+});
+
+router.post("/deleteResearcher", function(req, res){
+  var userEmail = req.body.email;
+
+  db.deleteResearcher(userEmail).then(() => {
+    res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    res.status(500).end();
+  })
 });
 
 router.get("/getEntityInfo", function(req, res){
@@ -110,6 +118,29 @@ router.get("/logout", function(req, res){
 router.post("/logout", function(req, res){
   req.session.destroy();
   res.redirect("/admin/login");
+});
+
+router.post("/resetResearcherPassword", function(req, res){
+  var userEmail = req.body.email;
+
+  db.resetResearcherPassword(userEmail).then(password => {
+    email.sendResetMail(userEmail, password);
+    res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    res.status(500).end();
+  })
+});
+
+router.post("/toggleAdmin", function(req, res){
+  var userEmail = req.body.email;
+
+  db.researcherToggleAdmin(userEmail).then(() => {
+    res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    res.status(500).end();
+  })
 });
 
 module.exports = router;

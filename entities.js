@@ -102,4 +102,24 @@ router.post("/logout", function(req, res){
   res.redirect("/entities/login");
 });
 
+router.post("/updateResearcherData", function(req, res){
+  var userData = req.body;
+
+  // To prevent manually modificated mail
+  userData.email = req.session.user.email;
+
+  db.updateResearcherData(userData).then(() => {
+    db.getResearcherData(req.session.user.email).then(data => {
+      req.session.user = data;
+      res.status(200).end();
+    }).catch(err => {
+      console.log(err);
+      res.status(500).end();
+    });
+  }).catch(err => {
+    console.log(err);
+    res.status(500).end();
+  })
+});
+
 module.exports = router;

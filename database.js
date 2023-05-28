@@ -11,6 +11,7 @@ class Database{
   #bucketName;
   #config;
   #datastore;
+  #saltRounds;
   #storage;
   #taskDistributionMethod;
 
@@ -18,38 +19,9 @@ class Database{
     this.#bucketName = 'hive-compute.appspot.com';
     this.#config = options;
     this.#datastore = new Datastore();
+    this.#saltRounds = 12;
     this.#storage = new Storage();
     this.#taskDistributionMethod = "fair";
-  }
-
-  checkAdmin(email, password){
-    return new Promise((resolve, reject) => {
-      const kind = "admin";
-      const adminKey = this.#datastore.key([kind, email]);
-
-      this.#datastore.get(adminKey).then(data => {
-        const userData = data[0];
-        if(userData){
-          const passwordHash = userData.password;
-  
-          bcrypt.compare(password, passwordHash).then(isCorrect => {
-            if(isCorrect){
-              this.#removeOldSessions(); 
-
-              resolve({
-                name: userData.name,
-                surname: userData.surname ?? "",
-                email: userData.email
-              });
-            } else {
-              resolve(null);
-            }
-          }).catch(reject);
-        } else {
-          resolve(null)
-        }
-      }).catch(reject);
-    });
   }
 
   checkUser(email, password){
@@ -84,31 +56,8 @@ class Database{
     });
   }
 
-  createAdmin(adminData){
-    return new Promise((resolve, reject) => {
-      const kind = "admin";
-      const adminKey = this.#datastore.key([kind, adminData.email]);
-  
-      const newPassword = this.#generatePassword();
-  
-      const admin = {
-        key: adminKey,
-        data: {
-          name: adminData.name,
-          surname: adminData.surname,
-          password: newPassword.hash,
-          email: adminData.email
-        }
-      }
-  
-      this.#datastore.save(admin).then(() => {
-        resolve(newPassword.password);
-      }).catch(reject);
-    });
-  }
-
   createEntity(entityData){
-
+    // TO DO !!!
   }
   
   createProject(projectData, projectImage, entity){
@@ -220,30 +169,29 @@ class Database{
 
       try {
         transaction.run().then(() => {
-          transaction.delete(userKey).then(() => {
-            // Delete user cookie to prevent future actions
-            const querySessions = transaction.createQuery('express-sessions');
-            transaction.runQuery(querySessions).then(data => {
-              const sessionList = data[0];
-              var sessionsToRemove = [];
-    
-              sessionList.forEach(session => {
-                var sessionData = JSON.parse(session.data);
-                if(sessionData.user.email == email){
-                  sessionsToRemove.push(session[this.#datastore.KEY].name);
-                }
-              });
-    
-              var sessionPromises = [];
-    
-              sessionsToRemove.forEach(sessionId => {
-                var sessionKey = this.#datastore.key(['express-session', sessionId]);
-                sessionPromises.push(transaction.delete(sessionKey));
-              });
-    
-              Promise.all(sessionPromises).then(() => {
-                transaction.commit().then(resolve).catch(reject);
-              });
+          transaction.delete(userKey);
+          // Delete user cookie to prevent future actions
+          const querySessions = transaction.createQuery('express-sessions');
+          transaction.runQuery(querySessions).then(data => {
+            const sessionList = data[0];
+            var sessionsToRemove = [];
+  
+            sessionList.forEach(session => {
+              var sessionData = JSON.parse(session.data);
+              if(sessionData.user.email == email){
+                sessionsToRemove.push(session[this.#datastore.KEY].name);
+              }
+            });
+  
+            var sessionPromises = [];
+  
+            sessionsToRemove.forEach(sessionId => {
+              var sessionKey = this.#datastore.key(['express-session', sessionId]);
+              sessionPromises.push(transaction.delete(sessionKey));
+            });
+  
+            Promise.all(sessionPromises).then(() => {
+              transaction.commit().then(resolve).catch(reject);
             });
           });
         });
@@ -259,10 +207,8 @@ class Database{
   }
 
   #generatePassword(){
-    const saltRounds = 12;
-
     const newPassword = Math.random().toString(36).slice(-8);
-    const hash = bcrypt.hashSync(newPassword, saltRounds);
+    const hash = bcrypt.hashSync(newPassword, this.#saltRounds);
 
     return {
       password: newPassword,
@@ -334,6 +280,26 @@ class Database{
     }
   }
 
+  getResearcherData(email){
+    return new Promise((resolve, reject) => {
+      const kind = "researcher";
+      const researcherKey = this.#datastore.key([kind, email]);
+
+      this.#datastore.get(researcherKey).then(data => {
+        const userData = data[0];
+        if(userData){
+          resolve({
+            name: userData.name,
+            surname: userData.surname ?? "",
+            email: userData.email,
+            entity: userData.entity,
+            isAdmin: userData.isAdmin ?? false
+          });
+        }
+      }).catch(reject);
+    });
+  }
+
   getResearchers(entity, myMail){
     return new Promise((resolve, reject) => {
       const query = this.#datastore.createQuery('researcher').filter('entity', '=', entity);
@@ -389,6 +355,70 @@ class Database{
     });
   }
 
+  researcherToggleAdmin(email){
+    return new Promise((resolve, reject) => {
+      const transaction = this.#datastore.transaction();
+      const userKey = this.#datastore.key(['researcher', email]);
+
+      try {
+        transaction.run().then(() => {
+          transaction.get(userKey).then(data => {
+            var userData = data[0];
+
+            if(userData.isAdmin){
+              userData.isAdmin = false;
+            } else {
+              userData.isAdmin = true;
+            }
+
+            const user = {
+              key: userKey,
+              data: userData
+            }
+
+            transaction.save(user);
+            transaction.commit().then(resolve).catch(reject);
+          }).catch(reject);
+        });
+      } catch (err) {
+        transaction.rollback();
+        reject(err);
+      }
+    });
+  }
+
+  resetResearcherPassword(email){
+    return new Promise((resolve, reject) => {
+      const transaction = this.#datastore.transaction();
+      const userKey = this.#datastore.key(['researcher', email]);
+
+      try {
+        transaction.run().then(() => {
+          transaction.get(userKey).then(data => {
+            var userData = data[0];
+
+            const newPassword = this.#generatePassword();
+
+            userData.password = newPassword.hash;
+
+            const user = {
+              key: userKey,
+              data: userData
+            }
+
+            transaction.save(user);
+            transaction.commit().then(() => {
+              resolve(newPassword.password);
+            }).catch(reject);
+          }).catch(reject);
+        });
+      } catch (err) {
+        transaction.rollback();
+        reject(err);
+      }
+    });
+  }
+
   submitExecution(executionData){
     return new Promise((resolve, reject) => {
       const kind = "execution";
@@ -416,6 +446,45 @@ class Database{
       }
 
       this.#datastore.save(user).then(resolve).catch(reject);
+    });
+  }
+
+  updateResearcherData(user){
+    return new Promise((resolve, reject) => {
+      const transaction = this.#datastore.transaction();
+      const userKey = this.#datastore.key(['researcher', user.email]);
+
+      try {
+        transaction.run().then(() => {
+          transaction.get(userKey).then(data => {
+            var userData = data[0];
+
+            if(user.name && user.name != ""){
+              userData.name = user.name;
+            }
+
+            if(user.surname && user.surname != ""){
+              userData.surname = user.surname;
+            }
+
+            if(user.password && user.password != ""){
+              const hash = bcrypt.hashSync(user.password, this.#saltRounds);
+              userData.password = hash;
+            }
+
+            const modifiedUser = {
+              key: userKey,
+              data: userData
+            }
+
+            transaction.save(modifiedUser);
+            transaction.commit().then(resolve).catch(reject);
+          }).catch(reject);
+        });
+      } catch (err) {
+        transaction.rollback();
+        reject(err);
+      }
     });
   }
 

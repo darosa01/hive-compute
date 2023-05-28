@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="assets/img/logo-hive.png" type="image/x-icon">
   <link rel="stylesheet" href="/assets/css/style-entities.css">
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <title>Entities - HiveCompute</title>
@@ -312,18 +313,93 @@
     const profileSettings= {
       data: function() {
         return {
-          
+          user: {
+            name: "",
+            surname: "",
+            email: ""
+          },
+          newPassword: "",
+          newPasswordRepetition: "",
+          passwordAlert: false,
+          isLoading: true
         }
+      },
+      emits: ['changePage'],
+      methods: {
+        getMyData: function(){
+          fetch('/entities/getMyData').then(res => res.json()).then(data => {
+            this.user = data;
+            this.isLoading = false;
+          }).catch(console.error);
+        },
+        updateData: function(){
+
+          var form = document.getElementById('user-data-form');
+
+          if(!form.reportValidity()){
+            return;
+          }
+
+          if(this.newPassword != this.newPasswordRepetition){
+            this.passwordAlert = true;
+            return;
+          } else {
+            this.passwordAlert = false;
+          }
+
+          if(this.newPassword != ""){
+            this.user.password = this.newPassword;
+          }
+
+          this.isLoading = true;
+
+          fetch('/entities/updateResearcherData', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(this.user)
+          }).then(() => {
+            this.$emit('changePage', 0);
+          }).catch(console.error);
+        }
+      },
+      mounted(){
+        this.getMyData();
       },
       template: 
       `
       <main class="main-section">
-        <div class="section-title">Profile Settings</div>
+        <div class="section-title">My profile</div>
+        <form action="javascript:void(0)" class="user-data-form" id="user-data-form">
+          <div>
+            <div>Name: </div>
+            <input type="text" v-model="user.name" required>
+          </div>
+          <div>
+            <div>Surname: </div>
+            <input type="text" v-model="user.surname" required>
+          </div>
+          <div>
+            <div>Email: </div>
+            <input type="text" v-model="user.email" readonly title="Email cannot be modified...">
+          </div>
+          <div>
+            <div>Password (only if you want to modify it): </div>
+            <input type="password" v-model="newPassword">
+          </div>
+          <div>
+            <div>Repeat the password: </div>
+            <input type="password" v-model="newPasswordRepetition">
+          </div>
+          <button @click="updateData()">Save changes</button>
+        </form>
+        <div v-if="passwordAlert" class="form-error">Passwords must match. Please check them and try again.</div>
       </main>
-      `,
-      methods: {
-        
-      }
+      <div v-if="isLoading" class="popup">
+        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+      </div>
+      `
     };
 
     let options = {
@@ -361,8 +437,9 @@
       template: 
       `
       <header>
-        <div>
-          <img src="/assets/img/collaborate.svg" alt="logo" class="logo" @click="page = 0">
+        <div @click="page = 0">
+          <img src="/assets/img/logo-hive.png" alt="logo" class="logo">
+          <div>HiveCompute - Entities</div>
         </div>
         <nav class="nav-links">
           <div @click="page = 1">Add Task</div>
