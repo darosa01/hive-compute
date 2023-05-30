@@ -20,9 +20,12 @@ const sess = {
     })
   }),
   secret: 'keyboard cat',
+  proxy: true,
   resave: false,
   saveUninitialized: false,
-  cookie: {}
+  cookie: {
+    maxAge: 1000 * 60 * 60, // 1h session expiration
+  }
 }
 
 if (app.get('env') === 'production') {
