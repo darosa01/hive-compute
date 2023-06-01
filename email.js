@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const mailCredentials = require('./mail-credentials.js');
 
+
 class Email{
 
   #transporter;

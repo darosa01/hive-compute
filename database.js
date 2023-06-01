@@ -1,16 +1,18 @@
 const bcrypt = require('bcrypt');
-// const crypto = require('crypto');
-// crypto.randomUUID()
+const crypto = require('crypto');
+
 const options = require('./options');
 
 const { Datastore } = require('@google-cloud/datastore');
 const { Storage } = require('@google-cloud/storage');
+
 
 class Database{
 
   #bucketName;
   #config;
   #datastore;
+  #p2pClient;
   #saltRounds;
   #storage;
   #taskDistributionMethod;
@@ -22,6 +24,31 @@ class Database{
     this.#saltRounds = 12;
     this.#storage = new Storage();
     this.#taskDistributionMethod = "fair";
+
+    import('webtorrent-hybrid').then(({ default: WebTorrent }) => {
+      this.#p2pClient = new WebTorrent();
+    });
+  }
+
+  addData(name, file){
+    return new Promise((resolve, reject) => {
+      file.buffer.name = name;
+      const newFile = file.buffer;
+      this.#p2pClient.seed(newFile, (torrent) => {
+        const kind = "datafile";
+        const dataKey = this.#datastore.key([kind]);
+
+        const data = {
+          key: dataKey,
+          data: {
+            title: name,
+            magnetURI: torrent.magnetURI
+          }
+        }
+    
+        this.#datastore.save(data).then(resolve).catch(reject);
+      });
+    });
   }
 
   checkUser(email, password){
@@ -77,9 +104,10 @@ class Database{
         const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
 
         fileRef.getSignedUrl({
-          action: "read"
+          action: "read",
+          expires: "9999-12-31"
         }).then(imageUrl => {
-          projectData.imageUrl = imageUrl;
+          projectData.imageUrl = imageUrl[0];
   
           const project = {
             key: projectKey,
@@ -255,7 +283,10 @@ class Database{
     return new Promise((resolve, reject) => {
       var query = this.#datastore.createQuery('project').filter('entity', '=', entity);
       this.#datastore.runQuery(query).then(data => {
-        resolve(data);
+        data[0].forEach(elem => {
+          elem.id = elem[this.#datastore.KEY].id;
+        });
+        resolve(data[0]);
       }).catch(reject);
     });
   }
@@ -280,6 +311,24 @@ class Database{
     }
   }
 
+  getProjectTasks(userEntity, projectId){
+    return new Promise((resolve, reject) => {
+      const projectKey = this.#datastore.key(["project", this.#datastore.int(projectId)]);
+      this.#datastore.get(projectKey).then(data => {
+        const projectData = data[0];
+        if(!projectData || projectData.entity != userEntity){
+          return reject("You are trying to access a project that is not yours.");
+        }
+
+        var query = this.#datastore.createQuery('task').filter('project', '=', projectId);
+        this.#datastore.runQuery(query).then(data => {
+          const tasks = data[0];
+          resolve(tasks);
+        }).catch(reject);
+      }).catch(reject);
+    });
+  }
+
   getResearcherData(email){
     return new Promise((resolve, reject) => {
       const kind = "researcher";
@@ -296,6 +345,36 @@ class Database{
             isAdmin: userData.isAdmin ?? false
           });
         }
+      }).catch(reject);
+    });
+  }
+
+  getResearcherNumbers(entity){
+    return new Promise((resolve, reject) => {
+      var query = this.#datastore.createQuery('project').filter('entity', '=', entity);
+      this.#datastore.runQuery(query).then(data => {
+        const projects = data[0].map(p => p[this.#datastore.KEY].id);
+
+        if(projects.length < 1){
+          const numbers = {
+            projects: 0,
+            tasks: 0
+          }
+          return resolve(numbers);
+        }
+
+        var query = this.#datastore.createQuery('task').filter('project', 'IN', projects);
+
+        this.#datastore.runQuery(query).then(data2 => {
+          const tasks = data2[0];
+
+          const numbers = {
+            projects: projects.length,
+            tasks: tasks.length
+          }
+
+          resolve(numbers);
+        }).catch(reject);
       }).catch(reject);
     });
   }

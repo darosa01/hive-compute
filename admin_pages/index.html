@@ -44,9 +44,7 @@
           </div>
         </section>
       </main>
-      <div v-if="isLoading" class="popup">
-        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
-      </div>
+      <loading-icon v-if="isLoading"></loading-icon>
       `,
       mounted(){
         fetch('/admin/getNumbers').then(res => res.json()).then(data => {
@@ -236,7 +234,10 @@
         </div>
         <div class="users-box">
           <div class="users-card" v-for="user in orderedUsers">
-            <div>{{user.name}} <b>{{user.surname}}</b></div>
+            <div>
+              <div>{{user.name}} <b>{{user.surname}}</b></div>
+              <div>{{user.email}}</div>
+            </div>
             <div class="admin-badge" v-if="user.isAdmin">Admin</div>
             <div class="users-button-group">
               <img src="assets/img/key.svg" alt="reset password" title="Reset password" @click="resetConfirmation(user)">
@@ -248,30 +249,28 @@
       </main>
       <div class="popup" v-if="toAdmin || deleting || reseting">
         <div class="popup-element" v-if="toAdmin">
-          Are you sure you want to add/remove the admin role to the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b>?
+          <div>Are you sure you want to add/remove the admin role to the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b>?</div>
           <div class="confirmation-buttons">
             <div @click="toggleAdmin()">Change admin role</div>
             <div class="red-link" @click="toAdmin = false">Cancel</div>
           </div>
         </div>
         <div class="popup-element error" v-if="deleting">
-          Are you sure you want to delete the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b>?
+          <div>Are you sure you want to delete the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b>?</div>
           <div class="confirmation-buttons">
             <div @click="deleteUser()">Delete user</div>
             <div class="red-link" @click="deleting = false">Cancel</div>
           </div>
         </div>
         <div class="popup-element" v-if="reseting">
-          Are you sure you want to reset the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b> password?
+          <div>Are you sure you want to reset the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b> password?</div>
           <div class="confirmation-buttons">
             <div @click="resetPassword()">Reset password</div>
             <div class="red-link" @click="reseting = false">Cancel</div>
           </div>
         </div>
       </div>
-      <div v-if="isLoading" class="popup">
-        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
-      </div>
+      <loading-icon v-if="isLoading"></loading-icon>
       `,
       mounted(){
         this.getUsers();
@@ -364,11 +363,18 @@
         </form>
         <div v-if="passwordAlert" class="form-error">Passwords must match. Please check them and try again.</div>
       </main>
-      <div v-if="isLoading" class="popup">
+      <loading-icon v-if="isLoading"></loading-icon>
+      `
+    };
+
+    const loadingIcon = {
+      template: 
+      `
+      <div class="popup">
         <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
       </div>
       `
-    };
+    }
 
     let options = {
       data: function() {
@@ -435,6 +441,7 @@
     app.component('add-user', addUser);
     app.component('manage-users', manageUsers);
     app.component('profile-settings', profileSettings);
+    app.component('loading-icon', loadingIcon);
     const vm = app.mount("#app")
   </script>
 </body>

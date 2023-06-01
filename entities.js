@@ -27,6 +27,19 @@ router.get("/", function(req, res){
   res.sendFile(__dirname + "/entities_pages/index.html");
 });
 
+router.post("/addData", upload.single('datafile'), function(req, res){
+  if(!req.file || !req.body.title){
+    res.status(400).end();
+  }
+
+  db.addData(req.body.title, req.file).then(() => {
+    res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    res.status(500).end();
+  });
+});
+
 router.post("/addProject", upload.single('image'), function(req, res){
   if(!req.file || !req.body.title || !req.body.text || !req.body.url){
     res.status(400).end();
@@ -39,7 +52,7 @@ router.post("/addProject", upload.single('image'), function(req, res){
     name: imageName,
     buffer: imageBuffer
   }
-  db.addProject(projectData, image, entity).then(() => {
+  db.createProject(projectData, image, entity).then(() => {
     res.status(200).end();
   }).catch(err => {
     console.log(err);
@@ -47,24 +60,41 @@ router.post("/addProject", upload.single('image'), function(req, res){
   });
 });
 
+router.get("/getEntityInfo", function(req, res){
+  db.getEntityInfo(req.session.user.entity).then(data => {
+    res.json(data);
+  }).catch(err => {
+    console.log(err);
+    res.status(500).end();
+  })
+});
+
 router.get("/getMyData", function(req, res){
   res.json(req.session.user);
 });
 
 router.get("/getMyProjects", function(req, res){
-  var userEmail = req.session.user.email;
-  db.getMyProjects(userEmail).then(data => {
+  var entity = req.session.user.entity;
+  db.getMyProjects(entity).then(data => {
     res.json(data);
   }).catch(err => console.log(err));
 });
 
 router.post("/getProjectTasks", function(req, res){
-  var userEmail = req.session.user.email;
-  var projectKey = req.body.projectKey;
-  console.log(req); 
-  db.getProjectTasks(userEmail, projectKey).then(data => {
+  var userEntity = req.session.user.entity;
+  var projectId = req.body.projectId;
+  db.getProjectTasks(userEntity, projectId).then(data => {
     res.json(data);
   }).catch(err => console.log(err));
+});
+
+router.get("/getResearcherNumbers", function(req, res){
+  db.getResearcherNumbers(req.session.user.entity).then(data => {
+    res.json(data);
+  }).catch(err => {
+    console.log(err);
+    res.status(500).end();
+  })
 });
 
 router.get("/login", function(req, res){
