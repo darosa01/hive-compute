@@ -11,6 +11,7 @@ class Database{
 
   #bucketName;
   #config;
+  #createTorrent;
   #datastore;
   #p2pClient;
   #saltRounds;
@@ -25,29 +26,66 @@ class Database{
     this.#storage = new Storage();
     this.#taskDistributionMethod = "fair";
 
-    import('webtorrent-hybrid').then(({ default: WebTorrent }) => {
-      this.#p2pClient = new WebTorrent();
+    import('create-torrent').then(({ default: createTorrent }) => {
+      this.#createTorrent = createTorrent;
     });
   }
 
-  addData(name, file){
+  addData(name, file, entity){
     return new Promise((resolve, reject) => {
-      file.buffer.name = name;
-      const newFile = file.buffer;
-      this.#p2pClient.seed(newFile, (torrent) => {
-        const kind = "datafile";
-        const dataKey = this.#datastore.key([kind]);
 
-        const data = {
-          key: dataKey,
-          data: {
-            title: name,
-            magnetURI: torrent.magnetURI
-          }
-        }
-    
-        this.#datastore.save(data).then(resolve).catch(reject);
-      });
+      const newFile = file.buffer;
+
+      const extension = file.originalname.split('.').at(-1);
+
+      const destFileName = "data-" + crypto.randomUUID() + "." + extension;
+      
+      this.#storage.bucket(this.#bucketName).file(destFileName).save(newFile).then(() => {
+        const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
+
+        fileRef.getSignedUrl({
+          action: "read",
+          expires: "9999-12-31"
+        }).then(dataUrl => {
+
+          this.#createTorrent(newFile, {
+            name: destFileName,
+            urlList: dataUrl
+          }, (err, torrent) => {
+            if(err){
+              return reject(err);
+            }
+
+            const torrentFileName = "torrent-" + crypto.randomUUID() + ".torrent";
+
+            this.#storage.bucket(this.#bucketName).file(torrentFileName).save(torrent).then(() => {
+              const torrentRef = this.#storage.bucket(this.#bucketName).file(torrentFileName);
+      
+              torrentRef.getSignedUrl({
+                action: "read",
+                expires: "9999-12-31"
+              }).then(torrentUrl => {
+
+                const dataKey = this.#datastore.key(['datafile']);
+
+                const data = {
+                  key: dataKey,
+                  data: {
+                    title: name,
+                    fileUrl: dataUrl,
+                    fileName: destFileName,
+                    torrentUrl: torrentUrl,
+                    torrentName: torrentFileName,
+                    entity: entity
+                  }
+                }
+            
+                this.#datastore.save(data).then(resolve).catch(reject);
+              }).catch(reject);
+            }).catch(reject);
+          });
+        }).catch(reject);
+      }).catch(reject);
     });
   }
 
@@ -84,7 +122,7 @@ class Database{
   }
 
   createEntity(entityData){
-    // TO DO !!!
+    // This function will not be implemented in this stage.
   }
   
   createProject(projectData, projectImage, entity){
@@ -144,10 +182,10 @@ class Database{
     });
   }
 
-  createTask(entity, taskData){
+  createTask(entity, taskData, wasmBuffer){
     return new Promise((resolve, reject) => {
 
-      const projectKey = this.#datastore.key(["project", taskData.project]);
+      const projectKey = this.#datastore.key(["project", this.#datastore.int(taskData.project)]);
 
       this.#datastore.get(projectKey).then(data => {
         const projectData = data[0];
@@ -156,15 +194,30 @@ class Database{
           return reject("Error creating task: not your project.");
         }
 
-        const kind = "task";
-        const taskKey = this.#datastore.key([kind]);
+        const destFileName = "wasm-" + crypto.randomUUID() + ".wasm";
+
+        this.#storage.bucket(this.#bucketName).file(destFileName).save(wasmBuffer).then(() => {
+          const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
   
-        const task = {
-          key: taskKey,
-          data: taskData
-        }
-  
-        this.#datastore.save(task).then(resolve).catch(reject);
+          fileRef.getSignedUrl({
+            action: "read",
+            expires: "9999-12-31"
+          }).then(wasmUrl => {
+
+            const taskKey = this.#datastore.key(['task']);
+
+            taskData.wasmUrl = wasmUrl[0];
+            taskData.wasmName = destFileName;
+            taskData.isActive = false;
+
+            const task = {
+              key: taskKey,
+              data: taskData
+            }
+        
+            this.#datastore.save(task).then(resolve).catch(reject);
+          }).catch(reject);
+        }).catch(reject);
       }).catch(reject);
     });
   }
@@ -183,6 +236,26 @@ class Database{
       }
   
       this.#datastore.save(user).then(resolve).catch(reject);
+    });
+  }
+
+  deleteData(dataId, entity){
+    return new Promise((resolve, reject) => {
+      const dataKey = this.#datastore.key(["datafile", this.#datastore.int(dataId)]);
+
+      this.#datastore.get(dataKey).then(data => {
+        const dataData = data[0];
+
+        if(dataData.entity != entity){
+          return reject('Error deleting: Not your data files.');
+        }
+
+        this.#storage.bucket(this.#bucketName).file(dataData.torrentName).delete().then(() => {
+          this.#storage.bucket(this.#bucketName).file(dataData.fileName).delete().then(() => {
+            this.#datastore.delete(dataKey).then(resolve).catch(reject);
+          }).catch(reject);
+        }).catch(reject);
+      }).catch(reject);
     });
   }
 
@@ -279,6 +352,18 @@ class Database{
     });
   }
 
+  getMyDataFiles(entity){
+    return new Promise((resolve, reject) => {
+      var query = this.#datastore.createQuery('datafile').filter('entity', '=', entity);
+      this.#datastore.runQuery(query).then(data => {
+        data[0].forEach(elem => {
+          elem.id = elem[this.#datastore.KEY].id;
+        });
+        resolve(data[0]);
+      }).catch(reject);
+    });
+  }
+
   getMyProjects(entity){
     return new Promise((resolve, reject) => {
       var query = this.#datastore.createQuery('project').filter('entity', '=', entity);
@@ -295,6 +380,9 @@ class Database{
     var query = this.#datastore.createQuery('task');
     var tasks = await this.#datastore.runQuery(query);
 
+    // Remove inactive tasks
+    tasks = tasks.filter(t => t.isActive);
+
     var query = this.#datastore.createQuery('execution');
     var executions = await this.#datastore.runQuery(query);
 
@@ -307,8 +395,9 @@ class Database{
       case 'fair':
         return this.#fairTaskDistribution(this.#config, executionsPerTask, tasks, userId);
       case 'none':
-        return;
+        return null;
     }
+    return null;
   }
 
   getProjectTasks(userEntity, projectId){
@@ -322,6 +411,9 @@ class Database{
 
         var query = this.#datastore.createQuery('task').filter('project', '=', projectId);
         this.#datastore.runQuery(query).then(data => {
+          data[0].forEach(elem => {
+            elem.id = elem[this.#datastore.KEY].id;
+          });
           const tasks = data[0];
           resolve(tasks);
         }).catch(reject);
@@ -404,6 +496,14 @@ class Database{
         resolve(numbers);
       }).catch(reject);
     });
+  }
+
+  #isNullishOrEmpty(element){
+    if(element == null || element == ""){
+      return true;
+    } else {
+      return false;
+    }
   }
 
   #removeOldSessions(){
@@ -512,6 +612,42 @@ class Database{
     });
   }
 
+  toggleTask(entity, taskId){
+    return new Promise((resolve, reject) => {
+      const transaction = this.#datastore.transaction();
+      const taskKey = this.#datastore.key(['task', this.#datastore.int(taskId)]);
+
+      try {
+        transaction.run().then(() => {
+          transaction.get(taskKey).then(taskData => {
+            var task = taskData[0];
+
+            const projectKey = this.#datastore.key(['project', this.#datastore.int(task.project)]);
+
+            transaction.get(projectKey).then(projectData => {
+              const project = projectData[0];
+
+              if(project.entity == entity){
+                task.isActive = !task.isActive;
+
+                const newTask = {
+                  key: taskKey,
+                  data: task
+                }
+
+                transaction.save(newTask);
+              }
+              transaction.commit().then(resolve).catch(reject);
+            }).catch(reject);
+          }).catch(reject);
+        });
+      } catch (err) {
+        transaction.rollback();
+        reject(err);
+      }
+    });
+  }
+
   updateLastSeen(userId){
     return new Promise((resolve, reject) => {
       const userKey = this.#datastore.key(['user', userId]);
@@ -525,6 +661,76 @@ class Database{
       }
 
       this.#datastore.save(user).then(resolve).catch(reject);
+    });
+  }
+
+  updateProject(project, newImage, entity){
+    return new Promise((resolve, reject) => {
+      const transaction = this.#datastore.transaction();
+      const projectKey = this.#datastore.key(['project', this.#datastore.int(project.id)]);
+
+      try {
+        transaction.run().then(() => {
+          transaction.get(projectKey).then(data => {
+            var projectData = data[0];
+            
+            if(projectData.entity != entity){
+              return reject('Error updating: Not your project.');
+            }
+
+            if(!this.#isNullishOrEmpty(project.title)){
+              projectData.title = project.title;
+            }
+
+            if(!this.#isNullishOrEmpty(project.text)){
+              projectData.text = project.text;
+            }
+
+            if(!this.#isNullishOrEmpty(project.url)){
+              projectData.url = project.url;
+            }
+
+            if(this.#isNullishOrEmpty(newImage)){
+              const updatedProject = {
+                key: projectKey,
+                data: projectData
+              }
+  
+              transaction.save(updatedProject);
+              transaction.commit().then(resolve).catch(reject);
+            } else {
+              this.#storage.bucket(this.#bucketName).file(projectData.imageName).delete().catch(reject);
+
+              const extension = file.originalname.split('.').at(-1);
+              const destFileName = "image-" + crypto.randomUUID() + "." + extension; // AAA
+
+              this.#storage.bucket(this.#bucketName).file(destFileName).save(newImage.buffer).then(() => {
+                projectData.imageName = destFileName;
+
+                const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
+
+                fileRef.getSignedUrl({
+                  action: "read",
+                  expires: "9999-12-31"
+                }).then(imageUrl => {
+                  projectData.imageUrl = imageUrl;
+
+                  const updatedProject = {
+                    key: projectKey,
+                    data: projectData
+                  }
+      
+                  transaction.save(updatedProject);
+                  transaction.commit().then(resolve).catch(reject);
+                }).catch(reject);
+              }).catch(reject);
+            }
+          }).catch(reject);
+        });
+      } catch (err) {
+        transaction.rollback();
+        reject(err);
+      }
     });
   }
 
@@ -565,6 +771,10 @@ class Database{
         reject(err);
       }
     });
+  }
+
+  updateTask(){
+    // TO DO
   }
 
   // Task distribution methods

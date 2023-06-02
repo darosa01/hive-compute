@@ -15,35 +15,36 @@ const upload = multer({
 
 router.use(function checkSession(req, res, next){
   if(req.session.user !== undefined || req.url == "/login" || req.url == "/login-error"){
-    next();
+    return next();
   } else if (req.url == '/'){
-    res.redirect('/entities/login');
+    return res.redirect('/entities/login');
   } else{
-    res.status(403).end();
+    return res.status(403).end();
   }
 });
 
 router.get("/", function(req, res){
-  res.sendFile(__dirname + "/entities_pages/index.html");
+  return res.sendFile(__dirname + "/entities_pages/index.html");
 });
 
 router.post("/addData", upload.single('datafile'), function(req, res){
   if(!req.file || !req.body.title){
-    res.status(400).end();
+    return res.status(400).end();
   }
 
-  db.addData(req.body.title, req.file).then(() => {
-    res.status(200).end();
+  db.addData(req.body.title, req.file, req.session.user.entity).then(() => {
+    return res.status(200).end();
   }).catch(err => {
     console.log(err);
-    res.status(500).end();
+    return res.status(500).end();
   });
 });
 
 router.post("/addProject", upload.single('image'), function(req, res){
-  if(!req.file || !req.body.title || !req.body.text || !req.body.url){
-    res.status(400).end();
+  if(req.file == null || isNullishOrEmpty(req.body.title) || isNullishOrEmpty(req.body.text) || isNullishOrEmpty(req.body.url)){
+    return res.status(400).end();
   }
+
   const entity = req.session.user.entity;
   const projectData = req.body;
   const imageBuffer = req.file.buffer;
@@ -52,71 +53,122 @@ router.post("/addProject", upload.single('image'), function(req, res){
     name: imageName,
     buffer: imageBuffer
   }
+
   db.createProject(projectData, image, entity).then(() => {
-    res.status(200).end();
+    return res.status(200).end();
   }).catch(err => {
     console.log(err);
-    res.status(500).end();
+    return res.status(500).end();
+  });
+});
+
+router.post("/addTask", upload.single('wasm'), function(req, res){
+  if(req.file == null || isNullishOrEmpty(req.body.title) || isNullishOrEmpty(req.body.project) || req.body.dataDependencies == null){
+    return res.status(400).end();
+  }
+
+  const taskData = {
+    title: req.body.title,
+    project: req.body.project,
+    dataDependencies: req.body.dataDependencies
+  }
+
+  const wasmBuffer = req.file.buffer;
+  const entity = req.session.user.entity;
+
+  db.createTask(entity, taskData, wasmBuffer).then(() => {
+    return res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    return res.status(500).end();
+  });
+});
+
+router.post("/deleteData", function(req, res){
+  const entity = req.session.user.entity;
+  const dataId = req.body.dataId;
+
+  db.deleteData(dataId, entity).then(() => {
+    return res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    return res.status(500).end();
   });
 });
 
 router.get("/getEntityInfo", function(req, res){
   db.getEntityInfo(req.session.user.entity).then(data => {
-    res.json(data);
+    return res.json(data);
   }).catch(err => {
     console.log(err);
-    res.status(500).end();
-  })
+    return res.status(500).end();
+  });
 });
 
 router.get("/getMyData", function(req, res){
   res.json(req.session.user);
 });
 
+router.get("/getMyDataFiles", function(req, res){
+  var entity = req.session.user.entity;
+  db.getMyDataFiles(entity).then(data => {
+    return res.json(data);
+  }).catch(err => {
+    console.log(err);
+    return res.status(500).end();
+  });
+});
+
 router.get("/getMyProjects", function(req, res){
   var entity = req.session.user.entity;
   db.getMyProjects(entity).then(data => {
-    res.json(data);
-  }).catch(err => console.log(err));
+    return res.json(data);
+  }).catch(err => {
+    console.log(err);
+    return res.status(500).end();
+  });
 });
 
 router.post("/getProjectTasks", function(req, res){
   var userEntity = req.session.user.entity;
   var projectId = req.body.projectId;
   db.getProjectTasks(userEntity, projectId).then(data => {
-    res.json(data);
-  }).catch(err => console.log(err));
+    return res.json(data);
+  }).catch(err => {
+    console.log(err);
+    return res.status(500).end();
+  });
 });
 
 router.get("/getResearcherNumbers", function(req, res){
   db.getResearcherNumbers(req.session.user.entity).then(data => {
-    res.json(data);
+    return res.json(data);
   }).catch(err => {
     console.log(err);
-    res.status(500).end();
+    return res.status(500).end();
   })
 });
 
 router.get("/login", function(req, res){
   if(req.session.user !== undefined){
-    res.redirect("/entities");
+    return res.redirect("/entities");
   } else {
-    res.sendFile(__dirname + "/entities_pages/login.html");
+    return res.sendFile(__dirname + "/entities_pages/login.html");
   }
 });
 
 router.post("/login", function(req, res){
   if(req.session.user !== undefined){
-    res.redirect("/entities");
+    return res.redirect("/entities");
   } else {
     var email = req.body.email;
     var password = req.body.password;
     db.checkUser (email, password).then(userData => {
       if(userData !== null){
         req.session.user = userData;
-        res.redirect("/entities");
+        return res.redirect("/entities");
       } else {
-        res.sendFile(__dirname + "/entities_pages/login-error.html");
+        return res.sendFile(__dirname + "/entities_pages/login-error.html");
       }
     });
   }
@@ -124,12 +176,45 @@ router.post("/login", function(req, res){
 
 router.get("/logout", function(req, res){
   req.session.destroy();
-  res.redirect("/entities/login");
+  return res.redirect("/entities/login");
 });
 
 router.post("/logout", function(req, res){
   req.session.destroy();
-  res.redirect("/entities/login");
+  return res.redirect("/entities/login");
+});
+
+router.post("/toggleTask", function(req, res){
+  const entity = req.session.user.entity;
+  const taskId = req.body.taskId;
+  
+  db.toggleTask(entity, taskId).then(() => {
+    return res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    res.status(500).end();
+  })
+});
+
+router.post("/updateProject", upload.single('image'), function(req, res){
+  const entity = req.session.user.entity;
+  const updatedProject = {
+    id: req.body.id,
+    title: req.body.title,
+    text: req.body.text,
+    url: req.body.url
+  }
+
+  db.updateProject(updatedProject, req.file, entity).then(() => {
+    return res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    return res.status(500).end();
+  })
+});
+
+router.post("/updateTask", function(req, res){
+  // TO DO
 });
 
 router.post("/updateResearcherData", function(req, res){
@@ -141,15 +226,23 @@ router.post("/updateResearcherData", function(req, res){
   db.updateResearcherData(userData).then(() => {
     db.getResearcherData(req.session.user.email).then(data => {
       req.session.user = data;
-      res.status(200).end();
+      return res.status(200).end();
     }).catch(err => {
       console.log(err);
-      res.status(500).end();
+      return res.status(500).end();
     });
   }).catch(err => {
     console.log(err);
-    res.status(500).end();
+    return res.status(500).end();
   })
 });
+
+const isNullishOrEmpty = function(element){
+  if(element == null || element == ""){
+    return true;
+  } else {
+    return false;
+  }
+}
 
 module.exports = router;

@@ -68,26 +68,37 @@
           project: "",
           title: "",
           dataList: [],
-          dataDependencies: ""
+          dataDependencies: "",
+          projectList: [],
+          isLoading: true,
+          actionDone: false,
+          actionError: false
         }
       },
       methods: {
+        clearInputs: function(){
+          this.codeFile = null;
+          this.project = "";
+          this.title = "";
+          this.dataDependencies = "";
+        },
+        getData: function(){
+          fetch("/entities/getMyDataFiles").then(res => res.json()).then(data => {
+            this.dataList = data;
+          }).catch(console.error);
+        },
         getProjects: function(){
           fetch("/entities/getMyProjects", {
             method: "GET"
           }).then(res => res.json()).then(projects => {
-            var projectsList = document.getElementById("projects-list");
-            projectsList.innerHTML = "";
-            projects.forEach(project => {
-              projectsList.innerHTML += ('<option value="' + project.projectKey + '">' + project.title + '</option>');
-            });
-            projectsList.value = "";
-          }).catch(err => console.log(err));
+            this.projectList = projects;
+            this.isLoading = false;
+          }).catch(console.error);
         },
         newFile: function(e){
           this.codeFile = e.target.files[0];
         },
-        submitTask: function(){
+        sendNewTask: function(){
           var form = document.getElementById('create-task-form');
 
           if(!form.reportValidity()){
@@ -104,11 +115,16 @@
             method: 'POST',
             body: formData
           }).then(() => {
-            this.$emit('changePage', 4);
-          }).catch(console.error);
+            this.clearInputs();
+            this.actionDone = true;
+          }).catch(err => {
+            console.error(err);
+            this.actionError = true;
+          });
         }
       },
       mounted(){
+        this.getData();
         this.getProjects();
       },
       template: 
@@ -127,13 +143,14 @@
           <div>
             <div>Data dependencies: </div>
             <select v-model="dataDependencies">
-              <option v-for="data in dataList" :value="data.id">{{data.name}}</option>
+              <option value="" selected>*No dependencies*</option>
+              <option v-for="data in dataList" :value="data.id">{{data.title}}</option>
             </select>
           </div>
           <div>
             <div>Project: </div>
             <select v-model="project" required>
-              <option v-for="proj in projectsList" :value="proj.id">{{proj.title}}</option>
+              <option v-for="proj in projectList" :value="proj.id">{{proj.title}}</option>
             </select>
           </div>
           <button @click="sendNewTask">Create task</button>
@@ -149,6 +166,7 @@
           <div class="discrete-link" @click="actionError = false">Close</div>
         </div>
       </div>
+      <loading-icon v-if="isLoading"></loading-icon>
       `
     };
 
@@ -237,29 +255,6 @@
       `
     };
 
-    const manageTasks = {
-      data: function() {
-        return {
-          
-        }
-      },
-      props: ['selectedProject'],
-      methods: {
-        getTasksFromProject: function(projectId){
-
-        }
-      },
-      mounted(){
-        this.getTasksFromProject(this.selectedProject);
-      },
-      template: 
-      `
-      <main class="main-section">
-        <div class="section-title">Manage Tasks</div>
-      </main>
-      `
-    };
-
     const manageProjects = {
       data: function() {
         return {
@@ -276,7 +271,7 @@
           this.deleting = true;
         },
         deleteProject: function(project){
-
+          // TO DO
         },
         editProject: function(project){
           this.$emit('editProject', project);
@@ -323,20 +318,29 @@
       `
     };
 
-    const editProject= {
+    const editProject= { 
       data: function() {
         return {
           project: {
+            id: this.selectedProject.id,
             title: this.selectedProject.title,
             text: this.selectedProject.text,
             url: this.selectedProject.url
           },
           image: null,
-          tasks: undefined
+          tasks: undefined,
+          isLoading: true
         }
       },
+      emits: ['editTask', 'changePage'],
       props: ['selectedProject'],
       methods: {
+        deleteConfirmation: function(task){
+          // TO DO
+        },
+        deleteTask: function(task){
+          // TO DO
+        },
         editProject: function(){
           var form = document.getElementById('edit-project-form');
 
@@ -344,17 +348,21 @@
             return;
           }
 
+          this.isLoading = true;
+
           const formData = new FormData();
+          formData.append('id', this.project.id);
           formData.append('title', this.project.title);
           formData.append('text', this.project.text);
           formData.append('url', this.project.url);
           formData.append('image', this.image);
 
-          fetch("/entities/editProject", {
+          fetch("/entities/updateProject", {
             method: 'POST',
             body: formData
           }).then(() => {
-            this.$emit('changePage', 4);
+            this.isLoading = false;
+            this.$emit('changePage', 4); // AAA
           }).catch(console.error);
         },
         getProjectTasks: function(){
@@ -368,10 +376,25 @@
             })
           }).then(res => res.json()).then(tasks => {
             this.tasks = tasks;
+            this.isLoading = false;
           }).catch(console.error);
         },
         newImage: function(e){
           this.image = e.target.files[0];
+        },
+        toggleTask: function(task){
+          this.isLoading = true;
+          fetch("/entities/toggleTask", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              taskId: task.id
+            })
+          }).then(() => {
+            this.getProjectTasks()
+          }).catch(console.error);
         }
       },
       mounted(){
@@ -403,31 +426,82 @@
         <div>
           <div class="section-subtitle">Tasks: </div>
           <div class="task-card" v-for="task in tasks">
-            <div>{{task.title}}</div>
+            <div @click="$emit('editTask',task)">{{task.title}}</div>
             <div class="users-button-group">
+              <label class="switch">
+                <input type="checkbox" v-model="task.isActive" @click="toggleTask(task)">
+                <span class="slider round"></span>
+              </label>
               <img src="assets/img/delete.svg" alt="delete task" title="Delete task" @click="deleteConfirmation(task)">
             </div>
           </div>
         </div>
       </main>
+      <loading-icon v-if="isLoading"></loading-icon>
       `
     };
 
     const editTask= {
       data: function() {
         return {
-          
+          title: this.selectedTask.title,
+          dataDependencies: this.selectedTask.dataDependencies,
+          dataList: [],
+          projectList: [],
+          isLoading: true
         }
       },
-      props: ['taskKey'],
+      props: ['selectedTask'],
       methods: {
-        
+        loadData: function(){
+          fetch('/entities/getMyDataFiles').then(res => res.json()).then(data => {
+            this.dataList = data;
+          }).catch(console.error);
+        },
+        loadProjects: function(){
+          fetch('/entities/getMyProjects').then(res => res.json()).then(data => {
+            this.projectList = data;
+            this.isLoading = false;
+          }).catch(console.error);
+        },
+        modifyTask: function(){
+          // TO DO
+        }
+      },
+      mounted(){
+        this.loadData();
+        this.loadProjects();
       },
       template: 
       `
       <main class="main-section">
-        <div class="section-title">Edit Task</div>
+        <div class="section-title">Task: {{selectedTask.title}}</div>
+        <form action="javascript:void(0)" class="user-data-form" id="create-task-form">
+          <div>
+            <div>Title: </div>
+            <input type="text" v-model="title" placeholder="Write a title to quickly identify the task..." required>
+          </div>
+          <div>
+            <div>WASM code: </div>
+            <a :href="selectedTask.wasmUrl" class="download-link"><img src="/assets/img/download-white.svg">Download WASM code</a>
+          </div>
+          <div>
+            <div>Data dependencies: </div>
+            <select v-model="dataDependencies">
+              <option value="" selected>*No dependencies*</option>
+              <option v-for="data in dataList" :value="data.id">{{data.title}}</option>
+            </select>
+          </div>
+          <div>
+            <div>Project: </div>
+            <select v-model="project" required>
+              <option v-for="proj in projectList" :value="proj.id">{{proj.title}}</option>
+            </select>
+          </div>
+          <button @click="modifyTask">Modify task</button>
+        </form>
       </main>
+      <loading-icon v-if="isLoading"></loading-icon>
       `
     };
 
@@ -526,9 +600,11 @@
       data: function() {
         return {
           title: "",
-          dataFile: null
+          dataFile: null,
+          isLoading: false
         }
       },
+      emits: ['changePage'],
       methods: {
         addNewData: function(){
           var form = document.getElementById('add-data-form');
@@ -537,7 +613,7 @@
             return;
           }
 
-          // AAA
+          this.isLoading = true;
 
           const formData = new FormData();
           formData.append('title', this.title);
@@ -546,7 +622,10 @@
           fetch('/entities/addData', {
             method: 'POST',
             body: formData
-          })
+          }).then(() => {
+            this.isLoading = false;
+            this.$emit('changePage', 9);
+          }).catch(console.error);
         },
         newFile: function(e){
           this.dataFile = e.target.files[0];
@@ -563,30 +642,55 @@
           </div>
           <div>
             <div>Data file: </div>
-            <input type="file" @change="newFile" accept="application/json" required>
+            <input type="file" @change="newFile" required>
           </div>
           <button @click="addNewData">Add data</button>
         </form>
       </main>
+      <loading-icon v-if="isLoading"></loading-icon>
       `
     }
 
     const manageData = {
       data: function() {
         return {
-          dataList: []
+          dataList: [],
+          isLoading: true,
+          deleting: false,
+          selectedData: {
+            title: ""
+          }
         }
       },
       emits: ['changePage'],
       methods: {
-        deleteConfirmation: function(elem){
-
+        copyLink: function(link){
+          navigator.clipboard.writeText(link);
         },
-        deleteData: function(dataId){
-
+        deleteConfirmation: function(elem){
+          this.selectedData = elem;
+          this.deleting = true;
+        },
+        deleteData: function(){
+          this.isLoading = true;
+          this.deleting = false;
+          fetch('/entities/deleteData', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+              dataId: this.selectedData.id 
+            })
+          }).then(() => {
+            this.loadData();
+          }).catch(console.error);
         },
         loadData: function(){
-
+          fetch('/entities/getMyDataFiles').then(res => res.json()).then(data => {
+            this.dataList = data;
+            this.isLoading = false;
+          }).catch(console.error);
         },
         newData: function(){
           this.$emit('changePage', 8);
@@ -602,20 +706,28 @@
         <div class="add-project-button" @click="newData">
           + Add new data
         </div>
-        <div class="users-box">
-          <div class="users-card" v-for="elem in dataList">
-            <div>
-              <details>
-                <summary>{{elem.name}}</summary>
-                {{elem.magnetLink}}
-              </details>
-            </div>
+        <div class="data-box">
+          <div class="data-card" v-for="elem in dataList">
+            <div>{{elem.title}}</div>
             <div class="users-button-group">
+              <a :href="elem.fileUrl" download><img src="assets/img/download.svg" alt="download file" title="Download file"></a>
+              <a :href="elem.torrentUrl" download><img src="assets/img/cloud-download.svg" alt="download torrent" title="Download torrent"></a>
               <img src="assets/img/delete.svg" alt="delete data" title="Delete data" @click="deleteConfirmation(elem)">
             </div>
           </div>
         </div>
       </main>
+      <div class="popup" v-if="deleting">
+        <div class="popup-element error">
+          <div>Are you sure you want to delete the data file <b>{{this.selectedData.title}}</b>?</div>
+          <div>Note that if any task currently uses this data it could cause unexpected failures.</div>
+          <div class="confirmation-buttons">
+            <div @click="deleteData()">Delete data</div>
+            <div class="red-link" @click="deleting = false">Cancel</div>
+          </div>
+        </div>
+      </div>
+      <loading-icon v-if="isLoading"></loading-icon>
       `
     }
 
@@ -697,12 +809,11 @@
       <main-page v-if="page == 0" @change-page="changePage" :user-name="userName" :entity-name="entityName"></main-page>
       <add-task v-if="page == 1"></add-task>
       <add-project v-if="page == 2"></add-project>
-      <manage-tasks v-if="page == 3"></manage-tasks>
       <manage-projects v-if="page == 4" @change-page="changePage" @edit-project="editProject"></manage-projects>
       <profile-settings v-if="page == 5"></profile-settings>
-      <edit-project v-if="page == 6" :selected-project="selectedProject"></edit-project>
+      <edit-project v-if="page == 6" :selected-project="selectedProject" @edit-task="editTask" @change-page="changePage"></edit-project>
       <edit-task v-if="page == 7" :selected-task="selectedTask"></edit-task>
-      <add-data v-if="page == 8"></add-data>
+      <add-data v-if="page == 8" @change-page="changePage"></add-data>
       <manage-data v-if="page == 9" @change-page="changePage"></manage-data>
       `
     }
@@ -711,7 +822,6 @@
     app.component('main-page', mainPage);
     app.component('add-task', addTask);
     app.component('add-project', addProject);
-    app.component('manage-tasks', manageTasks);
     app.component('manage-projects', manageProjects);
     app.component('profile-settings', profileSettings);
     app.component('edit-project', editProject);
