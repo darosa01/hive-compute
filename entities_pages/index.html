@@ -362,7 +362,7 @@
             body: formData
           }).then(() => {
             this.isLoading = false;
-            this.$emit('changePage', 4); // AAA
+            this.$emit('changePage', 4); 
           }).catch(console.error);
         },
         getProjectTasks: function(){
@@ -428,7 +428,7 @@
           <div class="task-card" v-for="task in tasks">
             <div @click="$emit('editTask',task)">{{task.title}}</div>
             <div class="users-button-group">
-              <label class="switch">
+              <label class="switch" title="Activate or deactivate the task">
                 <input type="checkbox" v-model="task.isActive" @click="toggleTask(task)">
                 <span class="slider round"></span>
               </label>
@@ -446,6 +446,7 @@
         return {
           title: this.selectedTask.title,
           dataDependencies: this.selectedTask.dataDependencies,
+          project: this.selectedTask.project,
           dataList: [],
           projectList: [],
           isLoading: true
@@ -464,8 +465,23 @@
             this.isLoading = false;
           }).catch(console.error);
         },
-        modifyTask: function(){
-          // TO DO
+        modifyTask: function(){ // AAA
+          this.isLoading = true;
+          fetch('/entities/updateTask', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              id: this.selectedTask.id,
+              title: this.title,
+              dataDependencies: this.dataDependencies,
+              project: this.project
+            })
+          }).then(() => {
+            this.isLoading = false;
+            this.$emit('changePage', 4);
+          }).catch(console.error);
         }
       },
       mounted(){
@@ -812,7 +828,7 @@
       <manage-projects v-if="page == 4" @change-page="changePage" @edit-project="editProject"></manage-projects>
       <profile-settings v-if="page == 5"></profile-settings>
       <edit-project v-if="page == 6" :selected-project="selectedProject" @edit-task="editTask" @change-page="changePage"></edit-project>
-      <edit-task v-if="page == 7" :selected-task="selectedTask"></edit-task>
+      <edit-task v-if="page == 7" :selected-task="selectedTask" @change-page="changePage"></edit-task>
       <add-data v-if="page == 8" @change-page="changePage"></add-data>
       <manage-data v-if="page == 9" @change-page="changePage"></manage-data>
       `

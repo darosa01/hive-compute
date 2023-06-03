@@ -72,9 +72,9 @@ class Database{
                   key: dataKey,
                   data: {
                     title: name,
-                    fileUrl: dataUrl,
+                    fileUrl: dataUrl[0],
                     fileName: destFileName,
-                    torrentUrl: torrentUrl,
+                    torrentUrl: torrentUrl[0],
                     torrentName: torrentFileName,
                     entity: entity
                   }
@@ -259,8 +259,35 @@ class Database{
     });
   }
 
-  deleteProject(){
-    // TO DO !!!
+  deleteProject(projectId, entity){
+    return new Promise((resolve, reject) => { // AAA
+
+      const projectKey = this.#datastore.key(['project', this.#datastore.int(projectId)]);
+
+      this.#datastore.get(projectKey).then(data => {
+        const projectData = data[0];
+
+        if(projectData.entity != entity){
+          return reject('Error deleting project: not your project.');
+        }
+
+        var query = this.#datastore.createQuery('task').filter('project', '=', projectId);
+        this.#datastore.runQuery(query).then(data => {
+          const tasks = data[0];
+          const promiseList = [];
+
+          tasks.forEach(task => {
+            var newPromise = this.deleteTask(task[this.#datastore.KEY].id, entity);
+            promiseList.push(newPromise);
+          });
+
+          var newPromise = this.#datastore.delete(projectKey);
+          promiseList.push(newPromise);
+
+          Promise.all(promiseList).then(resolve).catch(reject);
+        }).catch(reject);
+      }).catch(reject);
+    });
   }
 
   deleteResearcher(email){
@@ -303,8 +330,27 @@ class Database{
     });
   }
 
-  deleteTask(){
-    // TO DO !!!
+  deleteTask(taskId, entity){
+    return new Promise((resolve, reject) => {
+      const taskKey = this.#datastore.key(['task', this.#datastore.int(taskId)]);
+
+      this.#datastore.get(taskKey).then(data => {
+        const taskData = data[0];
+
+        const projectKey = this.#datastore.key(['project', this.#datastore.int(taskData.project)]);
+        this.#datastore.get(projectKey).then(data2 => {
+          const projectData = data2[0];
+
+          if(projectData.entity != entity){
+            return reject('Error deleting task: not your task.');
+          }
+
+          this.#storage.bucket(this.#bucketName).file(taskData.wasmName).delete().then(() => {
+            this.#datastore.delete(taskKey).then(resolve).catch(reject);
+          }).catch(reject);
+        }).catch(reject);
+      }).catch(reject);
+    });
   }
 
   #generatePassword(){
@@ -702,7 +748,7 @@ class Database{
               this.#storage.bucket(this.#bucketName).file(projectData.imageName).delete().catch(reject);
 
               const extension = file.originalname.split('.').at(-1);
-              const destFileName = "image-" + crypto.randomUUID() + "." + extension; // AAA
+              const destFileName = "image-" + crypto.randomUUID() + "." + extension;
 
               this.#storage.bucket(this.#bucketName).file(destFileName).save(newImage.buffer).then(() => {
                 projectData.imageName = destFileName;
@@ -773,8 +819,51 @@ class Database{
     });
   }
 
-  updateTask(){
-    // TO DO
+  updateTask(task, entity){
+    return new Promise((resolve, reject) => {
+      const transaction = this.#datastore.transaction();
+      const taskKey = this.#datastore.key(['task', this.#datastore.int(task.id)]);
+
+      try {
+        transaction.run().then(() => {
+          transaction.get(taskKey).then(data => {
+            var taskData = data[0];
+
+            if(!this.#isNullishOrEmpty(task.title)){
+              taskData.title = task.title;
+            }
+
+            if(task.dataDependencies != null){
+              taskData.dataDependencies = task.dataDependencies;
+            }
+
+            if(!this.#isNullishOrEmpty(task.project)){
+              taskData.project = task.project;
+            }
+
+            const projectKey = this.#datastore.key(['project', this.#datastore.int(task.project)]);
+            transaction.get(projectKey).then(data2 => {
+              const projectData = data2[0];
+
+              if(projectData.entity != entity){
+                return reject('Error updating task: not your project.');
+              }
+
+              const modifiedTask = {
+                key: taskKey,
+                data: taskData
+              }
+  
+              transaction.save(modifiedTask);
+              transaction.commit().then(resolve).catch(reject);
+            }).catch(reject);
+          }).catch(reject);
+        }).catch(reject);
+      } catch (err) {
+        transaction.rollback();
+        reject(err);
+      }
+    });
   }
 
   // Task distribution methods

@@ -137,3 +137,6 @@ wasm-test/
 
 # Prevent mail credentials to be uploaded
 mail-credentials.js
+
+# VS Code counter
+.VSCodeCounter/

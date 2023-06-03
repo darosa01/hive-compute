@@ -214,7 +214,20 @@ router.post("/updateProject", upload.single('image'), function(req, res){
 });
 
 router.post("/updateTask", function(req, res){
-  // TO DO
+  const entity = req.session.user.entity;
+  const updatedTask = {
+    id: req.body.id,
+    title: req.body.title,
+    dataDependencies: req.body.dataDependencies,
+    project: req.body.project
+  }
+
+  db.updateTask(updatedTask, entity).then(() => {
+    return res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    return res.status(500).end();
+  })
 });
 
 router.post("/updateResearcherData", function(req, res){

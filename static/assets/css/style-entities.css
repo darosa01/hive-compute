@@ -14,6 +14,7 @@ header{
   display: flex;
   gap: 2rem;
   padding: 1rem 2rem;
+  user-select: none;
 }
 header > div{
   align-items: center;
@@ -129,7 +130,7 @@ textarea{
   font-size: 1rem;
   font-weight: bold;
   gap: 0.5rem;
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   text-decoration: none;
 }
 .download-link:hover{
