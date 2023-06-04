@@ -356,6 +356,7 @@ textarea{
   display: flex;
   gap: 1rem;
   padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
 }
 .task-card > div:first-child{
   cursor: pointer;

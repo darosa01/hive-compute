@@ -260,7 +260,7 @@ class Database{
   }
 
   deleteProject(projectId, entity){
-    return new Promise((resolve, reject) => { // AAA
+    return new Promise((resolve, reject) => {
 
       const projectKey = this.#datastore.key(['project', this.#datastore.int(projectId)]);
 
@@ -277,9 +277,12 @@ class Database{
           const promiseList = [];
 
           tasks.forEach(task => {
-            var newPromise = this.deleteTask(task[this.#datastore.KEY].id, entity);
+            var newPromise = this.deleteTaskTrusted(task[this.#datastore.KEY].id);
             promiseList.push(newPromise);
           });
+
+          var newPromise = this.#storage.bucket(this.#bucketName).file(projectData.imageName).delete();
+          promiseList.push(newPromise);
 
           var newPromise = this.#datastore.delete(projectKey);
           promiseList.push(newPromise);
@@ -348,6 +351,20 @@ class Database{
           this.#storage.bucket(this.#bucketName).file(taskData.wasmName).delete().then(() => {
             this.#datastore.delete(taskKey).then(resolve).catch(reject);
           }).catch(reject);
+        }).catch(reject);
+      }).catch(reject);
+    });
+  }
+
+    deleteTaskTrusted(taskId){
+    return new Promise((resolve, reject) => {
+      const taskKey = this.#datastore.key(['task', this.#datastore.int(taskId)]);
+
+      this.#datastore.get(taskKey).then(data => {
+        const taskData = data[0];
+
+        this.#storage.bucket(this.#bucketName).file(taskData.wasmName).delete().then(() => {
+          this.#datastore.delete(taskKey).then(resolve).catch(reject);
         }).catch(reject);
       }).catch(reject);
     });

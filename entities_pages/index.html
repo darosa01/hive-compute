@@ -105,6 +105,8 @@
             return;
           }
 
+          this.isLoading = true;
+
           const formData = new FormData();
           formData.append('title', this.title);
           formData.append('wasm', this.codeFile);
@@ -116,9 +118,11 @@
             body: formData
           }).then(() => {
             this.clearInputs();
+            this.isLoading = false;
             this.actionDone = true;
           }).catch(err => {
             console.error(err);
+            this.isLoading = false;
             this.actionError = true;
           });
         }
@@ -178,7 +182,8 @@
           url: "",
           image: null,
           actionDone: false,
-          actionError: false
+          actionError: false,
+          isLoading: false
         }
       },
       methods:{
@@ -188,6 +193,8 @@
           if(!form.reportValidity()){
             return;
           }
+
+          this.isLoading = true;
 
           const formData = new FormData();
           formData.append("title", this.title);
@@ -199,6 +206,7 @@
             method: 'POST',
             body: formData
           }).then(res => {
+            this.isLoading = false;
             if(res.status == 200){
               this.title = "";
               this.text = "";
@@ -211,6 +219,7 @@
             }
           }).catch(err => {
             console.log(err);
+            this.isLoading = false;
             this.actionError = true;
           });
         },
@@ -252,6 +261,7 @@
           <div class="discrete-link" @click="actionError = false">Close</div>
         </div>
       </div>
+      <loading-icon v-if="isLoading"></loading-icon>
       `
     };
 
@@ -270,8 +280,20 @@
           this.selectedProject = project;
           this.deleting = true;
         },
-        deleteProject: function(project){
-          // TO DO
+        deleteProject: function(){
+          this.deleting = false;
+          this.isLoading = true;
+          fetch("/entities/deleteProject", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              projectId: this.selectedProject.id
+            })
+          }).then(() => {
+            this.getProjects();
+          }).catch(console.error);
         },
         editProject: function(project){
           this.$emit('editProject', project);
@@ -329,6 +351,8 @@
           },
           image: null,
           tasks: undefined,
+          selectedTask: undefined,
+          deleting: false,
           isLoading: true
         }
       },
@@ -336,10 +360,23 @@
       props: ['selectedProject'],
       methods: {
         deleteConfirmation: function(task){
-          // TO DO
+          this.selectedTask = task;
+          this.deleting = true;
         },
-        deleteTask: function(task){
-          // TO DO
+        deleteTask: function(){
+          this.deleting = false;
+          this.isLoading = true;
+          fetch("/entities/deleteTask", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              taskId: this.selectedTask.id
+            })
+          }).then(() => {
+            this.getProjectTasks();
+          }).catch(console.error);
         },
         editProject: function(){
           var form = document.getElementById('edit-project-form');
@@ -437,6 +474,15 @@
           </div>
         </div>
       </main>
+      <div class="popup" v-if="deleting">
+        <div class="popup-element error">
+          <div>Are you sure you want to delete the task <b>{{this.selectedTask.title}}</b>?</div>
+          <div class="confirmation-buttons">
+            <div @click="deleteTask()">Delete task</div>
+            <div class="red-link" @click="deleting = false">Cancel</div>
+          </div>
+        </div>
+      </div>
       <loading-icon v-if="isLoading"></loading-icon>
       `
     };
@@ -465,7 +511,7 @@
             this.isLoading = false;
           }).catch(console.error);
         },
-        modifyTask: function(){ // AAA
+        modifyTask: function(){ 
           this.isLoading = true;
           fetch('/entities/updateTask', {
             method: 'POST',

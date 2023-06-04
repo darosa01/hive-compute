@@ -96,6 +96,30 @@ router.post("/deleteData", function(req, res){
   });
 });
 
+router.post("/deleteProject", function(req, res){
+  const entity = req.session.user.entity;
+  const projectId = req.body.projectId;
+
+  db.deleteProject(projectId, entity).then(() => {
+    return res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    return res.status(500).end();
+  });
+});
+
+router.post("/deleteTask", function(req, res){
+  const entity = req.session.user.entity;
+  const taskId = req.body.taskId;
+
+  db.deleteTask(taskId, entity).then(() => {
+    return res.status(200).end();
+  }).catch(err => {
+    console.log(err);
+    return res.status(500).end();
+  });
+});
+
 router.get("/getEntityInfo", function(req, res){
   db.getEntityInfo(req.session.user.entity).then(data => {
     return res.json(data);
