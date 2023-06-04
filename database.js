@@ -391,16 +391,34 @@ class Database{
           return resolve([]);
         }
 
-        var query = this.#datastore.createQuery('task').filter('name', 'IN', uniqueTasks);
+        var query = this.#datastore.createQuery('task').filter(__key__.id, 'IN', uniqueTasks);
         this.#datastore.runQuery(query).then(data => {
           var projects = data[0].map(a => a.project);
           const uniqueProjects = [...new Set(projects)];
 
-          var query = this.#datastore.createQuery('project').filter('name', 'IN', uniqueProjects);
+          var query = this.#datastore.createQuery('project').filter(__key__.id, 'IN', uniqueProjects);
           this.#datastore.runQuery(query).then(data => {
-            resolve(data);
+            var limitedData = data[0].map(p => {
+              return {
+                title: p.title,
+                text: p.text,
+                url: p.url,
+                imageUrl: p.imageUrl
+              }
+            });
+            resolve(limitedData);
           }).catch(reject);
         }).catch(reject);
+      }).catch(reject);
+    });
+  }
+
+  getData(dataId){
+    return new Promise((resolve, reject) => {
+      const dataKey = this.#datastore.key(['datafile', this.#datastore.int(dataId)]);
+
+      this.#datastore.get(dataKey).then(data => {
+        resolve(data[0]);
       }).catch(reject);
     });
   }
@@ -456,7 +474,7 @@ class Database{
 
     switch(this.#taskDistributionMethod){
       case 'fair':
-        return this.#fairTaskDistribution(this.#config, executionsPerTask, tasks, userId);
+        return this.#fairTaskDistribution(this.#config, executions, executionsPerTask, tasks, userId);
       case 'none':
         return null;
     }
@@ -885,7 +903,7 @@ class Database{
 
   // Task distribution methods
 
-  #fairTaskDistribution(config, executionsPerTask, tasks){
+  #fairTaskDistribution(config, executions, executionsPerTask, tasks){
 
     const nonExecutedTasks = tasks.filter(x => {
       return !executionsPerTask.some(e => e.task === x);

@@ -38,12 +38,7 @@ router.use(function checkUser(req, res, next) {
 });
 
 router.get('/', function(req, res) {
-  //res.send('API home page');
-
-  // JUST A TEST 
-  db.getNewTask().then(task => {
-    res.send(task);
-  });
+  res.send('User API v1.0');
 });
 
 router.get('/getContributions', function(req, res) {
@@ -54,6 +49,18 @@ router.get('/getContributions', function(req, res) {
     console.log(err);
     res.status(500).end();
   });
+});
+
+router.post('/getData', function(req, res) {
+  var dataId = req.body.dataId;
+
+  db.getData(dataId).then(data => {
+    res.json(data);
+  }).catch(err => {
+    console.log(err);
+    res.status(500).end();
+  });
+
 });
 
 router.get('/getNewTask', function(req, res) {

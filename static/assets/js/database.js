@@ -57,22 +57,26 @@ class Database {
       var request = store.getAll();
 
       request.onsuccess = function() {
-        resolve(request.result);
+        if(request.result){
+          return resolve(request.result);
+        } else {
+          return resolve([]);
+        }
       };
       request.onerror = function() {
-        reject(request.error);
+        return reject(request.error);
       }
     });
   }
 
-  getData(name){
+  getData(dataId){
     if(!this.#isReady){
       throw new Error('You are trying to get data from an uninitialized database.');
     }
 
     return new Promise((resolve, reject) => {  
       var store = this.db.transaction(this.#objectStore, 'readwrite').objectStore(this.#objectStore);
-      var request = store.get(name);
+      var request = store.get(dataId);
     
       request.onerror = (e) => {
         reject();
@@ -83,13 +87,13 @@ class Database {
     });
   }
 
-  saveData(buffer, name, length){
+  saveData(dataId, name, buffer){
     if(!this.#isReady){
       throw new Error('You are trying to save data to an uninitialized database.');
     }
 
     var store = this.db.transaction(this.#objectStore, 'readwrite').objectStore(this.#objectStore);
-    store.put({ name: name, length: length, buffer: buffer });
+    store.put({ dataId: dataId, name: name, buffer: buffer });
   }
 }
 

@@ -16,54 +16,52 @@ class Compute {
     return new Promise((resolve, reject) => {
       this.#userId = userId;
       this.#p2pClient = new P2P();
-      this.#p2pClient.init().then(resolve).catch(reject);
+      this.#p2pClient.init(userId).then(resolve).catch(reject);
     });
   }
 
-  #computeNewTask(){
-    this.#getNewTask().then(task => {
-      if(task){
-        try {
-          const codeBlob = new Blob([task.code], {
-            type: 'text/javascript'
-          });
-          const codeURL = URL.createObjectURL(codeBlob);
-  
-          worker = new Worker(codeURL);
-  
-          this.#getTaskWasm(task.name).then(results => {
-            const { instance } = results;
-            
-            // Create a Web Worker
-            const worker = new Worker('wasm-worker.js');
-            
-            // Send the WebAssembly module to the worker
-            worker.postMessage(instance);
-            
-            worker.onmessage = function(event){
-            
-              this.#submitCompletedTask({
-                taskId: task.name,
-                result: event.data
-              });
-              
-              worker.terminate();
-              if(this.#isComputing){
-                this.#computeNewTask();
-              }
-            };
-          });
-        } catch (error) {
-          console.error("CODE EXECUTION ERROR: " + error);
-        }
-      } else {
-        // if we don't have a task to solve -> wait for a minute and start again
-        console.info("There are no more tasks to solve. Trying again in 1 minute.")
-        timeoutRetry = setTimeout(() => {
-          this.#computeNewTask();
-        }, 1000 * 60);
+  async #computeNewTask(){
+    var task = await this.#getNewTask();
+
+    if(task){
+      var wasmResponse = await fetch(task.wasmUrl);
+      var wasmCode = await wasmResponse.arrayBuffer();
+      var data = null;
+
+      if(task.dataDependencies){
+        data = await this.#p2pClient.getData(task.dataDependencies);
       }
-    }).catch(console.error);  
+
+      const taskPayload = {
+        wasm: wasmCode,
+        data: data
+      }
+
+      try {
+        this.#worker = new Worker('wasm-worker.js');
+        
+        this.#worker.postMessage(taskPayload);
+        
+        this.#worker.onmessage = (event) => {
+          this.#submitCompletedTask({
+            taskId: task.name,
+            result: event.data
+          });
+          
+          this.#worker.terminate();
+          if(this.#isComputing){
+            this.#computeNewTask();
+          }
+        };
+      } catch (error) {
+        console.error("CODE EXECUTION ERROR: " + error);
+      }
+    } else {
+      console.info("There are no more tasks to solve. Trying again in 1 minute.")
+      this.#timeoutRetry = setTimeout(() => {
+        this.#computeNewTask();
+      }, 1000 * 60);
+    }
   }
 
   #getNewTask(){
@@ -71,50 +69,41 @@ class Compute {
       fetch('api/getNewTask', {
         method: "GET",
         headers: {
-          "User-Id": userId
+          "User-Id": this.#userId
         }
       }).then(res => res.json()).then(task => {
         if(task){
           resolve(task); // task to resolve
         } else if(task === null){
           resolve(null); // no more tasks available
-        } else{
+        } else {
           reject("Error receiving the task.");
         }
       }).catch(reject);
     });
   }
 
-  #getTaskWasm(taskId){
-    return new Promise((resolve, reject) => {
-      fetch('api/getTaskWasm', {
-        method: 'GET',
-        headers: {
-          "User-Id": userId,
-          "Task-Id": taskId
-        }
-      })
-      .then(response => response.arrayBuffer())
-      .then(bytes => WebAssembly.instantiate(bytes))
-      .then(resolve)
-      .catch(reject);
-    });
+  isComputing(){
+    return this.#isComputing;
   }
 
   startComputing(){
-    this.#isComputing = true;
-    this.#computeNewTask();
+    if(!this.#isComputing){
+      this.#isComputing = true;
+      this.#computeNewTask();
+    }
   }
 
   stopComputing(){
-
-    this.#isComputing = false;
+    if(this.#isComputing){
+      this.#isComputing = false;
   
-    if(typeof(worker) !== "undefined"){
-      this.#worker.terminate();
-    }
-    if(this.#timeoutRetry !== undefined){
-      clearTimeout(this.#timeoutRetry);
+      if(typeof(worker) !== "undefined"){
+        this.#worker.terminate();
+      }
+      if(this.#timeoutRetry !== undefined){
+        clearTimeout(this.#timeoutRetry);
+      }
     }
   }
 
@@ -126,7 +115,7 @@ class Compute {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(data)
-    }).catch(err => console.error(err));
+    }).catch(console.error);
   }
 }
 

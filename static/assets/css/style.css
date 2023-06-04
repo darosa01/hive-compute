@@ -311,6 +311,10 @@ section{
   justify-content: center;
 }
 
+.selectable{
+  cursor: pointer;
+}
+
 .spacer{
   min-height: 50px;
 }
@@ -361,6 +365,10 @@ section{
   font-weight: bold;
   font-size: 5rem;
   color: white;
+}
+
+.title-collaborating{
+  display: none;
 }
 
 .top-bar{

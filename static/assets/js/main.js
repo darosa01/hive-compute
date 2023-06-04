@@ -1,5 +1,7 @@
 import { Compute } from "./compute.js";
 
+var isSystemReady = false;
+
 if (typeof(Worker) === "undefined") {
   console.error("Worker not working :(");
   document.location.href = '/not-working.html';
@@ -35,35 +37,29 @@ var statusIcon = document.getElementById('status-icon');
 var statusText = document.getElementById('status-text');
 
 var startButton = document.getElementById("start-button");
+var alternativeStartButton = document.getElementById("alternative-start-button");
 var stopButton = document.getElementById("stop-button");
 var activityButton = document.getElementById("activity-button");
 var activityCloseButton = document.getElementById("activity-close");
 
 var activityBlock = document.getElementById("activity-background");
 
-var startText = "You're now collaborating with science!";
-var stopText = "Press <em>start</em> to begin collaborating!";
+var title = document.getElementById("title");
+var titleCollaborating = document.getElementById("title-collaborating");
+
+alternativeStartButton.onclick = function (e) {
+  e.preventDefault();
+  startComputing();
+}
 
 startButton.onclick = function (e) {
   e.preventDefault();
-  startButton.disabled = true;
-  stopButton.disabled = false;
-  document.getElementById("title").innerHTML = startText;
-  document.getElementById("use-indicator").style.backgroundColor = "greenyellow";
-  compute.startComputing();
-  statusText.innerHTML = "Computing!";
-  statusIcon.src = "assets/img/cpu.svg";
+  startComputing();
 }
 
 stopButton.onclick = function (e) {
   e.preventDefault();
-  stopButton.disabled = true;
-  startButton.disabled = false;
-  document.getElementById("title").innerHTML = stopText;
-  document.getElementById("use-indicator").style.backgroundColor = "red";
-  compute.stopComputing();
-  statusText.innerHTML = "Stopped";
-  statusIcon.src = "assets/img/stop.svg";
+  stopComputing();
 }
 
 activityButton.onclick = function (e) {
@@ -85,12 +81,13 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 // Event listener to prevent accidental close of the page
-/*
 window.addEventListener('beforeunload', function (e) {
   e.preventDefault();
-  e.returnValue = '';
+  if(compute.isComputing()){
+    e.returnValue = 'You are currently running tasks. If you close the page now they will stop and you will stop collaborating.';
+  }
 });
-*/
+
 
 /**
  * FUNCTIONS
@@ -197,7 +194,32 @@ function loadLogs(){
   }
 }
 
+function startComputing(){
+  if(isSystemReady){
+    startButton.disabled = true;
+    stopButton.disabled = false;
+    title.style.display = "none";
+    titleCollaborating.style.display = "block";
+    document.getElementById("use-indicator").style.backgroundColor = "greenyellow";
+    compute.startComputing();
+    statusText.innerHTML = "Computing!";
+    statusIcon.src = "assets/img/cpu.svg";
+  }
+}
+
+function stopComputing(){
+  stopButton.disabled = true;
+  startButton.disabled = false;
+  title.style.display = "block";
+  titleCollaborating.style.display = "none";
+  document.getElementById("use-indicator").style.backgroundColor = "red";
+  compute.stopComputing();
+  statusText.innerHTML = "Stopped";
+  statusIcon.src = "assets/img/stop.svg";
+}
+
 function systemReady(){
+  isSystemReady = true;
   startButton.disabled = false;
   statusIcon.src = 'assets/img/check.svg';
   statusText.innerHTML = 'Ready';
