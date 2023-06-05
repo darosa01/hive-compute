@@ -27,21 +27,19 @@
         <a href="#how-it-works">How it works</a>
       </nav>
     </div>
-    <div class="intro">
-      <div class="title" id="title">
-        Press <em class="selectable" id="alternative-start-button">start</em> to begin collaborating!
+    <div class="intro-grid">
+      <div class="intro-box intro-text rainbow-background" id="intro-text">
+        <div class="title" id="title">
+          Press <em class="selectable" id="alternative-start-button">start</em> to begin collaborating!
+        </div>
+        <div class="title title-collaborating" id="title-collaborating">
+          You're now collaborating with science! :)
+        </div>
       </div>
-      <div class="title title-collaborating" id="title-collaborating">
-        You're now collaborating with science!
+      <div class="intro-box intro-image" id="intro-image">
+        <a href="#contributions">What projects am I collaborating on?</a>
       </div>
-      <img src="assets/img/data-science.png" alt="science" height="400px" width="400px">
     </div>
-    <!-- 
-    <div class="intro-arrow">
-      <img src="assets/img/arrow.png" alt="arrow">
-    </div>
-    -->
-    <div class="spacer"></div>
   </header>
   <main>
     <section id="contributions">
@@ -82,26 +80,30 @@
     <small>Created by David Romero © 2023</small>
   </footer>
   <div class="status-bar" id="status-bar">
-    <div class="status" id="status">
-      <img id="status-icon" src="assets/img/loading.gif" alt="loading icon">
-      <span id="status-text">Loading...</span>
-    </div>
-    <div class="indicator-group">
-      <div title="Computing status - Green if it is computing">
-        <img src="assets/img/cpu.svg" alt="compute usage">
-        <div class="indicator" id="use-indicator"></div>
+    <div>
+      <div class="status" id="status">
+        <img id="status-icon" src="assets/img/loading.gif" alt="loading icon">
+        <span id="status-text">Loading...</span>
       </div>
-      <div title="Network status - Green if P2P is working">
-        <img src="assets/img/network.svg" alt="network usage">
-        <div class="indicator" id="network-indicator"></div>
+      <div class="indicator-group">
+        <div title="Computing status - Green if it is computing">
+          <img src="assets/img/cpu.svg" alt="compute usage">
+          <div class="indicator" id="use-indicator"></div>
+        </div>
+        <div title="Network status - Green if P2P is ready to share data">
+          <img src="assets/img/network.svg" alt="network usage">
+          <div class="indicator" id="network-indicator"></div>
+        </div>
       </div>
     </div>
-    <div class="button-group">
-      <button class="button start" id="start-button" title="Start computing" disabled>Start</button>
-      <button class="button stop" id="stop-button" title="Stop computing" disabled>Stop</button>
-    </div>
-    <div class="activity-button" id="activity-button" title="Watch the activity history">
-      <img src="assets/img/activity.svg" alt="activity history">
+    <div>
+      <div class="button-group">
+        <button class="button start" id="start-button" title="Start computing" disabled>Start</button>
+        <button class="button stop" id="stop-button" title="Stop computing" disabled>Stop</button>
+      </div>
+      <div class="activity-button" id="activity-button" title="Watch the activity history">
+        <img src="assets/img/activity.svg" alt="activity history">
+      </div>
     </div>
   </div>
   <div class="activity-background" id="activity-background">

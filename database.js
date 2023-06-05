@@ -5,6 +5,7 @@ const options = require('./options');
 
 const { Datastore } = require('@google-cloud/datastore');
 const { Storage } = require('@google-cloud/storage');
+const { log } = require('console');
 
 
 class Database{
@@ -460,12 +461,16 @@ class Database{
   async getNewTask(userId){
     var query = this.#datastore.createQuery('task');
     var tasks = await this.#datastore.runQuery(query);
+    tasks = tasks[0];
 
     // Remove inactive tasks
     tasks = tasks.filter(t => t.isActive);
 
+    tasks = tasks.map(t => t.id = t[this.#datastore.KEY].id);
+
     var query = this.#datastore.createQuery('execution');
     var executions = await this.#datastore.runQuery(query);
+    executions = executions[0];
 
     const executionsPerTask = Object.entries(executions.reduce((acc, { task }) => {
       acc[task] = (acc[task] || 0) + 1;
@@ -904,7 +909,6 @@ class Database{
   // Task distribution methods
 
   #fairTaskDistribution(config, executions, executionsPerTask, tasks){
-
     const nonExecutedTasks = tasks.filter(x => {
       return !executionsPerTask.some(e => e.task === x);
     });

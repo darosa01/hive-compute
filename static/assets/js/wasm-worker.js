@@ -1,9 +1,20 @@
 onmessage = async event => {
-  const instance = event.data;
-  
-  // Call the "main" function in the WebAssembly module
-  const result = instance.exports.main();
-  
-  // Send the result back to the main thread
-  postMessage(result);
+  const payload = event.data;
+
+  const wasmCode = payload.wasm;
+  const data = payload.data;
+
+  WebAssembly.instantiateStreaming(fetch(wasmCode)).then(res => {
+    const exports = res.instance.exports;
+
+    var result = null;
+
+    if(data != null){
+      result = exports.main(data);
+    } else {
+      result = exports.main();
+    }
+
+    postMessage(result);
+  });
 };

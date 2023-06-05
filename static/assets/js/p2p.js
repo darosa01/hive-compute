@@ -6,12 +6,10 @@ class P2P {
   #client;
   #db;
   #isReady;
-
   #userId;
 
   constructor(){
     this.#isReady = false;
-    this.#userId = userId;
   }
 
   init(userId){
@@ -25,9 +23,8 @@ class P2P {
       this.#db.init().then(() => {
         if(WebTorrent.WEBRTC_SUPPORT){
           this.#client = new WebTorrent();
-          this.#seedPreviousFiles();
           this.#isReady = true;
-          resolve();
+          this.#seedPreviousFiles().then(resolve).catch(reject);
         } else {
           reject("WebRTC is not supported by the browser.");
         }
@@ -46,14 +43,17 @@ class P2P {
       throw new Error('You are trying to use an uninitialized P2P client.');
     }
 
-    this.#client.add(torrentBuffer, (torrent) => {
-      torrent.files.forEach((file) => {
-        file.getBuffer((err, buffer) => {
-          if (err) {
-            console.error(err);
-            return;
-          }
-          this.#db.saveData(dataId, name, buffer);
+    console.info("Downloading data from torrent.");
+    return new Promise((resolve, reject) => {
+      this.#client.add(torrentBuffer, (torrent) => {
+        torrent.files.forEach((file) => {
+          file.getBuffer((err, buffer) => {
+            if (err) {
+              return reject(err);
+            }
+            this.#db.saveData(dataId, name, buffer);
+            return resolve(buffer);
+          });
         });
       });
     });
@@ -67,19 +67,21 @@ class P2P {
     return new Promise((resolve, reject) => {
       this.#db.getData(dataId).then(dataFromDB => {
         if(dataFromDB != null){
+          console.info("Getting necessary data from local DB.");
           return resolve(dataFromDB.file);
         }
 
+        console.info("Downloading torrent file.");
         fetch('/api/getData', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Id': userId
+            'User-Id': this.#userId
           },
           body: JSON.stringify({dataId: dataId})
         }).then(res => res.json()).then(data => {
           fetch(data.torrentUrl).then(res => res.arrayBuffer()).then(torrentBuffer => {
-            this.#downloadTorrent(torrentBuffer, dataId, data.fileName);
+            this.#downloadTorrent(torrentBuffer, dataId, data.fileName).then(resolve).catch(reject);
           }).catch(reject);
         }).catch(reject);
       }).catch(reject);
@@ -87,11 +89,15 @@ class P2P {
   }
 
   #seedPreviousFiles(){
-    this.#db.getAllFiles().then(files => {
-      files.forEach(file => {
-        this.#client.seed(file.buffer, { name: file.name });
-      });
-    }).catch(console.error);
+    console.info("P2P: Seeding preexisting files.");
+    return new Promise((resolve, reject) => {
+      this.#db.getAllFiles().then(files => {
+        files.forEach(file => {
+          this.#client.seed(file.buffer, { name: file.name });
+        });
+        resolve();
+      }).catch(reject);
+    });
   }
 }
 

@@ -44,6 +44,11 @@ var activityCloseButton = document.getElementById("activity-close");
 
 var activityBlock = document.getElementById("activity-background");
 
+var introText = document.getElementById("intro-text");
+var introImage = document.getElementById("intro-image");
+var statusBar = document.getElementById("status-bar");
+var navigationBar = document.getElementById("navigation");
+
 var title = document.getElementById("title");
 var titleCollaborating = document.getElementById("title-collaborating");
 
@@ -79,6 +84,9 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
   });
 });
+
+window.addEventListener('load', resizeElements);
+window.addEventListener('resize', resizeElements);
 
 // Event listener to prevent accidental close of the page
 window.addEventListener('beforeunload', function (e) {
@@ -194,12 +202,32 @@ function loadLogs(){
   }
 }
 
+function resizeElements(event){
+  function vh(percent) {
+    var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+    return (percent * h) / 100;
+  }
+
+  if(Math.max(document.documentElement.clientWidth, window.innerWidth || 0) > 950){
+    var newHeight = Math.max((vh(100) - navigationBar.offsetHeight - statusBar.offsetHeight - (16 * 5.4)), 0) + 'px';
+    introImage.style.height = newHeight;
+  
+    var newHeight = Math.max((vh(100) - navigationBar.offsetHeight - (16 * 8.5)), 0) + 'px';
+    introText.style.height = newHeight;
+  } else {
+    introImage.style.height = "";
+    introText.style.height = "";
+  }
+}
+
 function startComputing(){
   if(isSystemReady){
+    console.info("COMPUTING STARTED!");
     startButton.disabled = true;
     stopButton.disabled = false;
     title.style.display = "none";
     titleCollaborating.style.display = "block";
+    document.getElementById("intro-text").classList.toggle("rainbow-background");
     document.getElementById("use-indicator").style.backgroundColor = "greenyellow";
     compute.startComputing();
     statusText.innerHTML = "Computing!";
@@ -212,10 +240,12 @@ function stopComputing(){
   startButton.disabled = false;
   title.style.display = "block";
   titleCollaborating.style.display = "none";
+  document.getElementById("intro-text").classList.toggle("rainbow-background");
   document.getElementById("use-indicator").style.backgroundColor = "red";
   compute.stopComputing();
   statusText.innerHTML = "Stopped";
   statusIcon.src = "assets/img/stop.svg";
+  console.info("COMPUTING STOPPED!");
 }
 
 function systemReady(){
@@ -223,6 +253,8 @@ function systemReady(){
   startButton.disabled = false;
   statusIcon.src = 'assets/img/check.svg';
   statusText.innerHTML = 'Ready';
+  document.getElementById("network-indicator").style.backgroundColor = "greenyellow";
+  console.info("System is ready to work.");
 }
 
 function toggleAccordion(){

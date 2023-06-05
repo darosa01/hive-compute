@@ -1,9 +1,11 @@
 import { P2P } from "./p2p.js";
+import { config } from "./config.js";
 
 class Compute {
 
   #isComputing;
   #p2pClient;
+  #timeoutExecution;
   #timeoutRetry;
   #userId;
   #worker;
@@ -41,10 +43,19 @@ class Compute {
         this.#worker = new Worker('wasm-worker.js');
         
         this.#worker.postMessage(taskPayload);
+
+        this.#timeoutExecution = setTimeout(() => {
+          this.#worker.terminate();
+          if(this.#isComputing){
+            this.#computeNewTask();
+          }
+        }, config.executionTimeout);
         
         this.#worker.onmessage = (event) => {
+          clearTimeout(this.#timeoutExecution);
+          
           this.#submitCompletedTask({
-            taskId: task.name,
+            taskId: task.id,
             result: event.data
           });
           
@@ -65,6 +76,7 @@ class Compute {
   }
 
   #getNewTask(){
+    console.info("Getting a new task to solve.");
     return new Promise((resolve, reject) => {
       fetch('api/getNewTask', {
         method: "GET",
@@ -108,6 +120,7 @@ class Compute {
   }
 
   #submitCompletedTask(data){
+    console.info("Sending task result.");
     fetch('api/submitCompletedTask', {
       method: "POST",
       headers: {

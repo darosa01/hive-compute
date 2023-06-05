@@ -140,3 +140,6 @@ mail-credentials.js
 
 # VS Code counter
 .VSCodeCounter/
+
+# Old code
+old/
