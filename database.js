@@ -357,7 +357,7 @@ class Database{
     });
   }
 
-    deleteTaskTrusted(taskId){
+  deleteTaskTrusted(taskId){
     return new Promise((resolve, reject) => {
       const taskKey = this.#datastore.key(['task', this.#datastore.int(taskId)]);
 
@@ -475,15 +475,23 @@ class Database{
     const executionsPerTask = Object.entries(executions.reduce((acc, { task }) => {
       acc[task] = (acc[task] || 0) + 1;
       return acc;
-    }, {})).map( ([k,v]) => ({task: parseInt(k,10), count: v}));
+    }, {})).map( ([k,v]) => ({task: k, count: v}));
+
+    var taskId = null;
 
     switch(this.#taskDistributionMethod){
       case 'fair':
-        return this.#fairTaskDistribution(this.#config, executions, executionsPerTask, tasks, userId);
-      case 'none':
+        taskId = this.#fairTaskDistribution(this.#config, executions, executionsPerTask, tasks, userId);
+        break;
+      default:
         return null;
     }
-    return null;
+
+    if(taskId == null){
+      return null;
+    } else {
+      return await this.getTask(taskId);
+    }
   }
 
   getProjectTasks(userEntity, projectId){
@@ -564,6 +572,18 @@ class Database{
         const researchers = data[0].filter(r => r.email != myMail);
 
         resolve(researchers);
+      }).catch(reject);
+    });
+  }
+
+  getTask(taskId){
+    return new Promise((resolve, reject) => {
+      const taskKey = this.#datastore.key(['task', this.#datastore.int(taskId)]);
+
+      this.#datastore.get(taskKey).then(data => {
+        var task = data[0];
+        task.id = task[this.#datastore.KEY].id;
+        resolve(task);
       }).catch(reject);
     });
   }
@@ -908,7 +928,7 @@ class Database{
 
   // Task distribution methods
 
-  #fairTaskDistribution(config, executions, executionsPerTask, tasks){
+  #fairTaskDistribution(config, executions, executionsPerTask, tasks, userId){
     const nonExecutedTasks = tasks.filter(x => {
       return !executionsPerTask.some(e => e.task === x);
     });
@@ -933,8 +953,8 @@ class Database{
       }
 
       // Prevents a user from running the same task multiple times
-      if(!executions.find(e => e.task === executionsPerTask[i].task && e.user === userId)){
-        return tasks.find(t => t[this.#datastore.KEY].name == executionsPerTask[0].task);
+      if(!executions.some(e => e.task === executionsPerTask[i].task && e.userId === userId)){
+        return executionsPerTask[i].task;
       }
     }
     return null;

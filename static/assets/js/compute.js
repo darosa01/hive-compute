@@ -40,7 +40,7 @@ class Compute {
       }
 
       try {
-        this.#worker = new Worker('wasm-worker.js');
+        this.#worker = new Worker('/assets/js/wasm-worker.js');
         
         this.#worker.postMessage(taskPayload);
 
@@ -55,7 +55,7 @@ class Compute {
           clearTimeout(this.#timeoutExecution);
           
           this.#submitCompletedTask({
-            taskId: task.id,
+            task: task.id,
             result: event.data
           });
           

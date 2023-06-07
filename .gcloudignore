@@ -21,3 +21,6 @@ node_modules/
 
 # Old code
 old/
+
+# Cors configuration file for Cloud Storage
+cors_configuration.json

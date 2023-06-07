@@ -4,7 +4,7 @@ onmessage = async event => {
   const wasmCode = payload.wasm;
   const data = payload.data;
 
-  WebAssembly.instantiateStreaming(fetch(wasmCode)).then(res => {
+  WebAssembly.instantiate(wasmCode).then(res => {
     const exports = res.instance.exports;
 
     var result = null;

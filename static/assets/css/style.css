@@ -478,6 +478,10 @@ section{
 
 @media (max-width: 950px){
 
+  footer{
+    padding-bottom: calc(100px + 2rem);
+  }
+
   nav{
     flex-direction: column;
   }
@@ -505,10 +509,6 @@ section{
 }
 
 @media (max-width: 550px){
-
-  footer{
-    padding-bottom: calc(100px + 2rem);
-  }
 
   .investigation-element > img{
     width: 80vw;
