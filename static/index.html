@@ -10,7 +10,8 @@
   <link rel="shortcut icon" href="assets/img/logo-hive.png" type="image/x-icon">
   <link rel="stylesheet" href="https://unpkg.com/flickity@2/dist/flickity.min.css">
   <script src="https://cdn.jsdelivr.net/gh/lesander/console.history@v1.5.1/console-history.min.js"></script>
-  <script src="assets/js/external/webtorrent.min.js"></script>
+  <!-- <script src="assets/js/external/webtorrent.min.js"></script> -->
+  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
   <script type="module" src="assets/js/main.js"></script>
   <script defer src="https://unpkg.com/flickity@2/dist/flickity.pkgd.min.js"></script>
 </head>
@@ -33,7 +34,11 @@
           Press <em class="selectable" id="alternative-start-button">start</em> to begin collaborating!
         </div>
         <div class="title title-collaborating" id="title-collaborating">
-          You're now collaborating with science! :)
+          <div>You're now collaborating with science! :)</div>
+          <img src="assets/img/biotech.svg" alt="biotech icon" class="intro-icon">
+          <img src="assets/img/thinking.svg" alt="thinking icon" class="intro-icon">
+          <img src="assets/img/genetics.svg" alt="genetics icon" class="intro-icon">
+          <img src="assets/img/nature.svg" alt="nature icon" class="intro-icon">
         </div>
       </div>
       <div class="intro-box intro-image" id="intro-image">
@@ -45,6 +50,7 @@
     <section id="contributions">
       <div id="yes-contributions">
         <div class="subtitle">So far you have contributed to the following investigations:</div>
+        <!--
         <div class="main-carousel js-flickity" data-flickity-options='{ "cellAlign": "left", "contain": true, "wrapAround": true }'>
           <div class="carousel-cell">
             <img src="assets/img/scientific-research.jpg" alt="">
@@ -52,6 +58,7 @@
           <div class="carousel-cell">...</div>
           <div class="carousel-cell">...</div>
         </div>
+        -->
         <div class="investigations" id="investigations"></div>
       </div>
       <div class="no-contributions" id="no-contributions">
@@ -63,14 +70,60 @@
     <section id="project">
       <div class="subtitle">The project:</div>
       <p>
-        This project was born in 2023 as a result of a computer science final degree project. Created by David Romero.
+        It all starts with you... When you press the start button, you are inadvertently collaborating 
+        with various scientific investigations in the medical, physical, space, and many other fields.
+      </p>
+      <p>
+        This project was born in 2023 as a result of a computer science final degree project.
         It consists in a system that allows scientific comunity to use the domestic compute power to perform simulations 
-        and all kinds of investigations that require intensive computation.
+        and support all kinds of investigations that require intensive computation.
       </p>
     </section>
     <hr>
     <section id="how-it-works">
       <div class="subtitle">How it works:</div>
+      <p>
+        In a very short way, when you press the start button you are downloading tasks created by 
+        scientists and executing them on your device. When you find an answer to that little problem, 
+        you send the answer back. After pooling the thousands of responses from all users, scientists 
+        can use that data to continue their research.
+      </p>
+      <p>
+        And in case you still have doubts about how the system works... here's a more detailed 
+        explanation with an example:
+      </p>
+      <div class="operation-explanation">
+        <img src="assets/img/how-it-works/step1.png" alt="step 1">
+        <p>
+          In this first stage we have 4 users from 3 different networks, some of them with previous 
+          files from other tasks they have already completed.
+          Users B and D send the request for a new task to the central server, and when it receives 
+          them, it performs the corresponding queries in the database and returns the results.
+        </p>
+        <img src="assets/img/how-it-works/step2.png" alt="step 2">
+        <p>
+          Once the central server has received the necessary information from the database, it sends 
+          user B a new task, and since it knows that no one has the file 4 that is needed to perform 
+          the calculations, it also sends it to him.
+          In the same way, it sends user D a new task, but in this case, as it requires file 1 to perform 
+          the calculations and it is available to other users, it also sends him the instructions to 
+          start a new P2P connection with these and be able to get the file you need.
+        </p>
+        <img src="assets/img/how-it-works/step3.png" alt="step 3">
+        <p>
+          User D establishes with some of the users who have the file he needs and asks them for it. 
+          Then they send you, either a part or the whole file.
+        </p>
+        <img src="assets/img/how-it-works/step4.png" alt="step 4">
+        <p>
+          Once the users finish their respective tasks, they send the results back to the central 
+          server, which stores them in the database.
+        </p>
+      </div>
+    </section>
+    <hr>
+    <section id="credits">
+      <div class="subtitle">Credits:</div>
       <p>
 
       </p>

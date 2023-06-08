@@ -216,6 +216,13 @@ section{
   padding: 0.75rem;
 }
 
+.intro-icon{
+  height: 5rem;
+  padding-right: 3rem;
+  padding-top: 2rem;
+  width: 5rem;
+}
+
 .intro-image{
   /* background-image: url('https://cdn.pixabay.com/photo/2019/04/06/06/44/astronaut-4106766_1280.jpg'); */
   /* background-image: url('https://cdn.pixabay.com/photo/2018/11/20/16/44/laboratory-3827745_1280.jpg'); */
@@ -242,6 +249,7 @@ section{
 
 .intro-text{
   align-items: center;
+  background-color: hsl(0, 0%, 85%);
   display: flex;
   flex-direction: column;
   height: 65vh;
@@ -366,6 +374,21 @@ section{
   justify-content: center;
 }
 
+.operation-explanation{
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: center;
+}
+.operation-explanation img{
+  padding-top: 2rem;
+  width: 50vw;
+}
+.operation-explanation p{
+  padding: 0 4rem;
+}
+
 .rainbow-background{
   background: linear-gradient(124deg, #ff2400, #e81d1d, #e8b71d, #e3e81d, #1de840, #1ddde8, #2b1de8, #dd00f3, #dd00f3);
   background-size: 1800% 1800%;
@@ -451,6 +474,10 @@ section{
   padding: 0 2rem;
 }
 
+#yes-contributions{
+  display: none;
+}
+
 @media (max-width: 1024px) {
   .intro{
     display: flex;
@@ -492,6 +519,19 @@ section{
 
   .intro-grid{
     grid-template-columns: 1fr;
+  }
+
+  .intro-text{
+    height: 100%;
+    margin-bottom: 4rem;
+    padding: 0 2rem;
+  }
+
+  .operation-explanation img{
+    width: 100%;
+  }
+  .operation-explanation p{
+    padding: 0;
   }
 
   .status-bar{

@@ -460,10 +460,12 @@
           </div>
           <button @click="editProject">Modify project</button>
         </form>
-        <div>
+        <hr>
+        <div class="tasks-box">
           <div class="section-subtitle">Tasks: </div>
           <div class="task-card" v-for="task in tasks">
             <div @click="$emit('editTask',task)">{{task.title}}</div>
+            <div v-if="task.isResolved"><img class="done-badge" src="assets/img/done.svg" alt="resolved badge"></div>
             <div class="users-button-group">
               <label class="switch" title="Activate or deactivate the task">
                 <input type="checkbox" v-model="task.isActive" @click="toggleTask(task)">
@@ -498,7 +500,18 @@
           isLoading: true
         }
       },
+      emits: ['changePage'],
       props: ['selectedTask'],
+      computed: {
+        downloadName(){
+          var normalizedTitle = this.selectedTask.title.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          normalizedTitle = normalizedTitle.replace(" ", "_");
+          return "results-" + normalizedTitle + ".json";
+        },
+        resultsDownloadLink(){
+          return "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.selectedTask.result));
+        }
+      },
       methods: {
         loadData: function(){
           fetch('/entities/getMyDataFiles').then(res => res.json()).then(data => {
@@ -562,6 +575,15 @@
           </div>
           <button @click="modifyTask">Modify task</button>
         </form>
+        <div v-if="selectedTask.result">
+          <div class="section-subtitle">Result:</div>
+          <div class="results-box">
+            <pre>
+              {{JSON.stringify(selectedTask.result, null, 2)}}
+            </pre>
+            <a :href="resultsDownloadLink" :download="downloadName" title="Download JSON results"><img src="assets/img/download.svg" alt="download results"></a>
+          </div>
+        </div>
       </main>
       <loading-icon v-if="isLoading"></loading-icon>
       `

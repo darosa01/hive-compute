@@ -121,6 +121,11 @@ textarea{
   text-decoration: underline;
 }
 
+.done-badge{
+  height: 48px;
+  width: 48px;
+}
+
 .download-link{
   align-items: center;
   background-color: var(--main-background-color);
@@ -318,6 +323,24 @@ textarea{
   color: rgb(200, 50, 50);
 }
 
+.results-box{
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+.results-box > pre{
+  background-color: hsl(0, 0%, 90%);
+  border-radius: 1.5rem;
+  flex-grow: 1;
+  font-size: 1rem;
+  padding: 1rem;
+}
+.results-box > a > img{
+  height: 64px;
+  width: 64px;
+}
+
 .right{
   text-align: right;
 }
@@ -376,6 +399,10 @@ textarea{
 .task-form-input-group{
   display: flex;
   gap: 1rem;
+}
+
+.tasks-box{
+  padding: 1rem;
 }
 
 .user-data-form{

@@ -53,10 +53,12 @@ class Compute {
         
         this.#worker.onmessage = (event) => {
           clearTimeout(this.#timeoutExecution);
+
+          const stringifiedResult = JSON.stringify(event.data);
           
           this.#submitCompletedTask({
             task: task.id,
-            result: event.data
+            result: stringifiedResult
           });
           
           this.#worker.terminate();

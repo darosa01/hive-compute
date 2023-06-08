@@ -5,27 +5,25 @@ const options = require('./options');
 
 const { Datastore } = require('@google-cloud/datastore');
 const { Storage } = require('@google-cloud/storage');
-const { log } = require('console');
 
 
 class Database{
 
   #bucketName;
-  #config;
   #createTorrent;
   #datastore;
-  #p2pClient;
+  #options;
   #saltRounds;
   #storage;
   #taskDistributionMethod;
 
   constructor(){
     this.#bucketName = 'hive-compute.appspot.com';
-    this.#config = options;
+    this.#options = options;
     this.#datastore = new Datastore();
-    this.#saltRounds = 12;
+    this.#saltRounds = options.saltRounds;
     this.#storage = new Storage();
-    this.#taskDistributionMethod = "fair";
+    this.#taskDistributionMethod = options.taskDistributionMethod;
 
     import('create-torrent').then(({ default: createTorrent }) => {
       this.#createTorrent = createTorrent;
@@ -87,6 +85,37 @@ class Database{
           });
         }).catch(reject);
       }).catch(reject);
+    });
+  }
+
+  #checkIfTaskIsDone(taskId){
+    return new Promise((resolve, reject) => {
+
+      var query = this.#datastore.createQuery('execution').filter('task', '=', taskId);
+        this.#datastore.runQuery(query).then(data => {
+          const executions = data[0];
+
+          const resultCount = {};
+          
+          executions.forEach(e => {
+            resultCount[e.result] = (resultCount[e.result] || 0) + 1;
+          });
+
+          var results = Object.keys(resultCount);
+          var isTaskCompleted = false;
+
+          for(let i = 0; i < results.length; i++){
+            if(resultCount[results[i]] >= this.#options.minimumEqualAnswersToValidate){
+              isTaskCompleted = true;
+              this.#markTaskAsCompleted(taskId, results[i]).then(resolve).catch(reject);
+              break;
+            }
+          }
+
+          if(!isTaskCompleted){
+            return resolve();
+          }
+        }).catch(reject);
     });
   }
 
@@ -464,7 +493,7 @@ class Database{
     tasks = tasks[0];
 
     // Remove inactive tasks
-    tasks = tasks.filter(t => t.isActive);
+    tasks = tasks.filter(t => t.isActive && !t.isResolved);
 
     tasks = tasks.map(t => t.id = t[this.#datastore.KEY].id);
 
@@ -472,19 +501,15 @@ class Database{
     var executions = await this.#datastore.runQuery(query);
     executions = executions[0];
 
-    const executionsPerTask = Object.entries(executions.reduce((acc, { task }) => {
-      acc[task] = (acc[task] || 0) + 1;
-      return acc;
-    }, {})).map( ([k,v]) => ({task: k, count: v}));
-
     var taskId = null;
 
     switch(this.#taskDistributionMethod){
       case 'fair':
-        taskId = this.#fairTaskDistribution(this.#config, executions, executionsPerTask, tasks, userId);
+        taskId = this.#fairTaskDistribution(executions, tasks, userId);
         break;
-      default:
-        return null;
+      case 'simple':
+        taskId = this.#simpleTaskDistribution(executions, tasks, userId);
+        break;
     }
 
     if(taskId == null){
@@ -612,6 +637,36 @@ class Database{
     }
   }
 
+  #markTaskAsCompleted(taskId, result){
+    return new Promise((resolve, reject) => {
+      const transaction = this.#datastore.transaction();
+      const taskKey = this.#datastore.key(['task', this.#datastore.int(taskId)]);
+
+      try {
+        transaction.run().then(() => {
+          transaction.get(taskKey).then(data => {
+            var taskData = data[0];
+
+            taskData.isActive = false;
+            taskData.isResolved = true;
+            taskData.result = result;
+
+            const task = {
+              key: taskKey,
+              data: taskData
+            }
+
+            transaction.save(task);
+            transaction.commit().then(resolve).catch(reject);
+          }).catch(reject);
+        });
+      } catch (err) {
+        transaction.rollback();
+        reject(err);
+      }
+    });
+  }
+
   #removeOldSessions(){
     return new Promise((resolve, reject) => {
       const querySessions = this.#datastore.createQuery('express-sessions');
@@ -714,7 +769,9 @@ class Database{
         data: executionData
       }
 
-      this.#datastore.save(execution).then(resolve).catch(reject);
+      this.#datastore.save(execution).then(() => {
+        this.#checkIfTaskIsDone(executionData.task).then(resolve).catch(reject);
+      }).catch(reject);
     });
   }
 
@@ -928,7 +985,12 @@ class Database{
 
   // Task distribution methods
 
-  #fairTaskDistribution(config, executions, executionsPerTask, tasks, userId){
+  #fairTaskDistribution(executions, tasks, userId){
+    const executionsPerTask = Object.entries(executions.reduce((acc, { task }) => {
+      acc[task] = (acc[task] || 0) + 1;
+      return acc;
+    }, {})).map( ([k,v]) => ({task: k, count: v}));
+
     const nonExecutedTasks = tasks.filter(x => {
       return !executionsPerTask.some(e => e.task === x);
     });
@@ -948,13 +1010,19 @@ class Database{
     }
 
     for(let i=0; i < executionsPerTask.length; i++){
-      if(executionsPerTask[i].count >= config.executionRepetition){
-        return null;
-      }
-
       // Prevents a user from running the same task multiple times
       if(!executions.some(e => e.task === executionsPerTask[i].task && e.userId === userId)){
         return executionsPerTask[i].task;
+      }
+    }
+    return null;
+  }
+
+  #simpleTaskDistribution(executions, tasks, userId){
+    for(let i=0; i < tasks.length; i++){
+      // Prevents a user from running the same task multiple times
+      if(!executions.some(e => e.task === tasks[i] && e.userId === userId)){
+        return tasks[i];
       }
     }
     return null;

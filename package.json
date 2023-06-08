@@ -1,7 +1,7 @@
 {
   "name": "hive-compute",
   "version": "1.0.0",
-  "description": "",
+  "description": "Collaborate with scientific research by contributing the computing capacity that you do not use from your devices.",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon",
