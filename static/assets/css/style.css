@@ -162,6 +162,41 @@ section{
   width: 100%;
 }
 
+.credits-box{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.credits-card{
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  font-size: 1.25rem;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.credits-card > a{
+  background-color: var(--main-background-color);
+  border-radius: 1rem;
+  color: white;
+  margin: 1rem 0;
+  padding: 0.5rem 2rem;
+  text-decoration: none;
+}
+.credits-card > div{
+  font-weight: bold;
+}
+.credits-card > img{
+  border-radius: 50%;
+  height: 80px;
+  width: 80px;
+}
+
+.credits-subtitle{
+  font-weight: normal !important;
+  font-size: 1rem;
+}
+
 .indicator{
   width: calc(32px/2);
   height: calc(32px/2);
@@ -522,9 +557,8 @@ section{
   }
 
   .intro-text{
-    height: 100%;
-    margin-bottom: 4rem;
-    padding: 0 2rem;
+    height: auto;
+    padding: 2rem;
   }
 
   .operation-explanation img{
