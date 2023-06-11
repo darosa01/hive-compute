@@ -65,7 +65,6 @@
       data: function() {
         return {
           codeFile: null,
-          jsFile: null,
           project: "",
           title: "",
           dataList: [],
@@ -79,7 +78,6 @@
       methods: {
         clearInputs: function(){
           this.codeFile = null;
-          this.jsFile = null;
           this.project = "";
           this.title = "";
           this.dataDependencies = "";
@@ -100,9 +98,6 @@
         newFile: function(e){
           this.codeFile = e.target.files[0];
         },
-        newJsFile: function(e){
-          this.jsFile = e.target.files[0];
-        },
         sendNewTask: function(){
           var form = document.getElementById('create-task-form');
 
@@ -115,7 +110,6 @@
           const formData = new FormData();
           formData.append('title', this.title);
           formData.append('wasm', this.codeFile);
-          formData.append('js', this.jsFile);
           formData.append('project', this.project);
           formData.append('dataDependencies', this.dataDependencies);
 
@@ -149,10 +143,6 @@
           <div>
             <div>WASM Code: </div>
             <input type="file" @change="newFile" accept="application/wasm" required>
-          </div>
-          <div>
-            <div>Emscripten JS: </div>
-            <input type="file" @change="newJsFile" accept="text/javascript" required>
           </div>
           <div>
             <div>Data dependencies: </div>
@@ -516,10 +506,10 @@
         downloadName(){
           var normalizedTitle = this.selectedTask.title.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
           normalizedTitle = normalizedTitle.replace(" ", "_");
-          return "results-" + normalizedTitle + ".json";
+          return "results-" + normalizedTitle + ".txt";
         },
         resultsDownloadLink(){
-          return "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.selectedTask.result));
+          return "data:text/plain;charset=utf-8," + encodeURIComponent(this.selectedTask.result);
         }
       },
       methods: {
@@ -589,7 +579,7 @@
           <div class="section-subtitle">Result:</div>
           <div class="results-box">
             <pre>
-              {{JSON.stringify(selectedTask.result, null, 2)}}
+              {{selectedTask.result}}
             </pre>
             <a :href="resultsDownloadLink" :download="downloadName" title="Download JSON results"><img src="assets/img/download.svg" alt="download results"></a>
           </div>

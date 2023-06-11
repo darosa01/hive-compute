@@ -2,34 +2,58 @@ onmessage = async event => {
   const payload = event.data;
 
   const wasmCode = payload.wasm;
-  const jsModule = payload.js;
-  const data = payload.data;
+  const file = payload.data;
 
-  importScripts(jsModule);
+  const memory = new WebAssembly.Memory({ initial: 1 }); 
 
-  WebAssembly.Module.onRuntimeInitialized = () => {
-    var result = null;
+  const buffer = memory.buffer;
 
-    if(data != null){
-      result = exports.compute(data);
-    } else {
-      result = exports.compute();
+  const imports = {
+    wasmMemory: memory,
+    wasi_snapshot_preview1: {
+      proc_exit: function() {
+        
+      }
+    },
+    env: {
+      print: (offset) => {
+        const intArray = new Uint8Array(buffer, offset, 1);
+        console.log("Memory value:", intArray[0]);
+      }
     }
-
-    postMessage(result);
   };
 
-  WebAssembly.instantiate(wasmCode).then(res => {
-    const exports = res.instance.exports;
+  const res = await WebAssembly.instantiate(wasmCode, imports);
+  const exports = res.instance.exports;
 
-    var result = null;
+  var resultArray = null;
 
-    if(data != null){
-      result = exports.main(data);
-    } else {
-      result = exports.main();
-    }
+  if(file != null){
+    const fileBuffer = await file.arrayBuffer();
+    const dataArray = new Uint8Array(fileBuffer);
+    const dataSize = dataArray.length;
+    const currentSize = exports.memory.buffer.byteLength;
+    const neededPages = Math.ceil(dataSize / 65536); // 64KB pages
+    exports.memory.grow(neededPages);
+    const offset = currentSize;
+    const dataView = new Uint8Array(exports.memory.buffer, offset, dataSize);
+    dataView.set(dataArray);
+    const resultPtr = exports.compute(offset, dataSize);
+    const resultSize = exports.resultSize(resultPtr);
+    resultArray = new Uint8Array(
+      exports.memory.buffer,
+      resultPtr,
+      resultSize
+    );
+  } else {
+    const resultPtr = exports.compute();
+    const resultSize = exports.resultSize(resultPtr);
+    resultArray = new Uint8Array(
+      exports.memory.buffer,
+      resultPtr,
+      resultSize
+    );
+  }
 
-    postMessage(result);
-  });
+  postMessage(resultArray);
 };
