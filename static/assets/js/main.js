@@ -11,12 +11,12 @@ var userId;
 if (typeof(Storage) !== "undefined") {
   userId = localStorage.getItem("userId")
   if(!userId){
-    userId = crypto.randomUUID();
+    userId = window.crypto.randomUUID();
     localStorage.setItem("userId", userId);
   }
 } else {
   console.warn("LocalStorage not available - Some functions will be disabled.");
-  userId = crypto.randomUUID();
+  userId = window.crypto.randomUUID();
 }
 
 getContributions(userId);

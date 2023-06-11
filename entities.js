@@ -62,8 +62,8 @@ router.post("/addProject", upload.single('image'), function(req, res){
   });
 });
 
-router.post("/addTask", upload.single('wasm'), function(req, res){
-  if(req.file == null || isNullishOrEmpty(req.body.title) || isNullishOrEmpty(req.body.project) || req.body.dataDependencies == null){
+router.post("/addTask", upload.any(), function(req, res){
+  if(req.files == null || isNullishOrEmpty(req.body.title) || isNullishOrEmpty(req.body.project) || req.body.dataDependencies == null){
     return res.status(400).end();
   }
 
@@ -73,10 +73,11 @@ router.post("/addTask", upload.single('wasm'), function(req, res){
     dataDependencies: req.body.dataDependencies
   }
 
-  const wasmBuffer = req.file.buffer;
+  const wasmBuffer = req.file[0].buffer;
+  const jsBuffer = req.file[1].buffer;
   const entity = req.session.user.entity;
 
-  db.createTask(entity, taskData, wasmBuffer).then(() => {
+  db.createTask(entity, taskData, wasmBuffer, jsBuffer).then(() => {
     return res.status(200).end();
   }).catch(err => {
     console.log(err);

@@ -212,7 +212,7 @@ class Database{
     });
   }
 
-  createTask(entity, taskData, wasmBuffer){
+  createTask(entity, taskData, wasmBuffer, jsBuffer){
     return new Promise((resolve, reject) => {
 
       const projectKey = this.#datastore.key(["project", this.#datastore.int(taskData.project)]);
@@ -224,28 +224,42 @@ class Database{
           return reject("Error creating task: not your project.");
         }
 
-        const destFileName = "wasm-" + crypto.randomUUID() + ".wasm";
+        const randomId = crypto.randomUUID();
 
-        this.#storage.bucket(this.#bucketName).file(destFileName).save(wasmBuffer).then(() => {
-          const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
+        const wasmDestFileName = "wasm-" + randomId + ".wasm";
+        const jsDestFileName = "js-" + randomId + ".js";
+
+        this.#storage.bucket(this.#bucketName).file(wasmDestFileName).save(wasmBuffer).then(() => {
+          const wasmFileRef = this.#storage.bucket(this.#bucketName).file(wasmDestFileName);
   
-          fileRef.getSignedUrl({
+          wasmFileRef.getSignedUrl({
             action: "read",
             expires: "9999-12-31"
           }).then(wasmUrl => {
 
-            const taskKey = this.#datastore.key(['task']);
+            this.#storage.bucket(this.#bucketName).file(jsDestFileName).save(jsBuffer).then(() => {
+              const jsFileRef = this.#storage.bucket(this.#bucketName).file(jsDestFileName);
+      
+              jsFileRef.getSignedUrl({
+                action: "read",
+                expires: "9999-12-31"
+              }).then(jsUrl => {
+                const taskKey = this.#datastore.key(['task']);
 
-            taskData.wasmUrl = wasmUrl[0];
-            taskData.wasmName = destFileName;
-            taskData.isActive = false;
-
-            const task = {
-              key: taskKey,
-              data: taskData
-            }
-        
-            this.#datastore.save(task).then(resolve).catch(reject);
+                taskData.wasmUrl = wasmUrl[0];
+                taskData.wasmName = wasmDestFileName;
+                taskData.jsUrl = jsUrl[0];
+                taskData.jsName = jsDestFileName;
+                taskData.isActive = false;
+    
+                const task = {
+                  key: taskKey,
+                  data: taskData
+                }
+            
+                this.#datastore.save(task).then(resolve).catch(reject);
+              }).catch(reject);
+            }).catch(reject);
           }).catch(reject);
         }).catch(reject);
       }).catch(reject);
@@ -379,7 +393,9 @@ class Database{
           }
 
           this.#storage.bucket(this.#bucketName).file(taskData.wasmName).delete().then(() => {
-            this.#datastore.delete(taskKey).then(resolve).catch(reject);
+            this.#storage.bucket(this.#bucketName).file(taskData.jsName).delete().then(() => {
+              this.#datastore.delete(taskKey).then(resolve).catch(reject);
+            }).catch(reject);
           }).catch(reject);
         }).catch(reject);
       }).catch(reject);
@@ -394,7 +410,9 @@ class Database{
         const taskData = data[0];
 
         this.#storage.bucket(this.#bucketName).file(taskData.wasmName).delete().then(() => {
-          this.#datastore.delete(taskKey).then(resolve).catch(reject);
+          this.#storage.bucket(this.#bucketName).file(taskData.jsName).delete().then(() => {
+            this.#datastore.delete(taskKey).then(resolve).catch(reject);
+          }).catch(reject);
         }).catch(reject);
       }).catch(reject);
     });

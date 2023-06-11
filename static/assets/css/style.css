@@ -164,6 +164,7 @@ section{
 
 .credits-box{
   display: grid;
+  gap: 2rem;
   grid-template-columns: repeat(3, 1fr);
 }
 
@@ -583,6 +584,10 @@ section{
 }
 
 @media (max-width: 550px){
+
+  .credits-box{
+    grid-template-columns: 1fr;
+  }
 
   .investigation-element > img{
     width: 80vw;

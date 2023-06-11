@@ -38,14 +38,14 @@ class P2P {
     }
   }
 
-  #downloadTorrent(torrentBuffer, dataId, name){
+  #downloadTorrent(torrentUrl, dataId, name){
     if(!this.#isReady){
       throw new Error('You are trying to use an uninitialized P2P client.');
     }
 
     console.info("Downloading data from torrent.");
     return new Promise((resolve, reject) => {
-      this.#client.add(torrentBuffer, (torrent) => {
+      this.#client.add(torrentUrl, (torrent) => {
         torrent.files.forEach((file) => {
           file.getBuffer((err, buffer) => {
             if (err) {
@@ -80,9 +80,7 @@ class P2P {
           },
           body: JSON.stringify({dataId: dataId})
         }).then(res => res.json()).then(data => {
-          fetch(data.torrentUrl).then(res => res.arrayBuffer()).then(torrentBuffer => {
-            this.#downloadTorrent(torrentBuffer, dataId, data.fileName).then(resolve).catch(reject);
-          }).catch(reject);
+          this.#downloadTorrent(data.torrentUrl, dataId, data.fileName).then(resolve).catch(reject);
         }).catch(reject);
       }).catch(reject);
     });
