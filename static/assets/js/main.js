@@ -1,6 +1,8 @@
 import { Compute } from "./compute.js";
+import { Slider } from "./external/slider.js";
 
 var isSystemReady = false;
+var slider = new Slider();
 
 if (typeof(Worker) === "undefined") {
   console.error("Worker not working :(");
@@ -52,6 +54,9 @@ var navigationBar = document.getElementById("navigation");
 var title = document.getElementById("title");
 var titleCollaborating = document.getElementById("title-collaborating");
 
+var sliderPrev = document.getElementById("sliderPrev");
+var sliderNext = document.getElementById("sliderNext");
+
 alternativeStartButton.onclick = function (e) {
   e.preventDefault();
   startComputing();
@@ -73,6 +78,14 @@ activityButton.onclick = function (e) {
 }
 activityCloseButton.onclick = function (e) {
   activityBlock.style.display = "none";
+}
+
+sliderPrev.onclick = function(e){
+  slider.prevSlide();
+}
+
+sliderNext.onclick = function(e){
+  slider.nextSlide();
 }
 
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -118,38 +131,26 @@ function getContributions(userId){
     return;
   }
 
+  console.info("Getting contributions.");
+
   fetch('api/getContributions', {
     method: "GET",
     headers: {
       "User-Id": userId
     }
   }).then(res => res.json()).then(data => {
-    var investigationsSection = document.getElementById("investigations");
+    console.info("Contributions loaded.");
     var contributionsSection = document.getElementById("yes-contributions");
     var noContributionsSection = document.getElementById("no-contributions");
-    investigationsSection.innerHTML = "";
+    slider.clearSlider();
     data.forEach(elem => {
-      var newInvestigation = document.createElement("a");
-      newInvestigation.className = "investigation-element";
-      newInvestigation.href = elem.url;
-      newInvestigation.target = "_blank";
-      var newImage = document.createElement("img");
-      newImage.src = elem.image;
-      newImage.alt = "";
-      var newTitle = document.createElement("div");
-      newTitle.innerHTML = elem.title;
-      var newText = document.createElement("p");
-      newText.textContent = elem.text;
-
-      newInvestigation.appendChild(newImage);
-      newInvestigation.appendChild(newTitle);
-      newInvestigation.appendChild(newText);
-      investigationsSection.appendChild(newInvestigation);
+      slider.createSlide(elem.title, elem.text, elem.imageUrl, elem.url);
     });
     if(data.length < 1){
       contributionsSection.style.display = "none";
       noContributionsSection.style.display = "block";
     } else {
+      slider.buildSlider();
       contributionsSection.style.display = "block";
       noContributionsSection.style.display = "none";
     }

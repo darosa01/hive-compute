@@ -412,7 +412,7 @@ class Database{
 
   getContributions(userId){
     return new Promise((resolve, reject) => {
-      var query = this.#datastore.createQuery('execution').filter('user', '=', userId);
+      var query = this.#datastore.createQuery('execution').filter('userId', '=', userId);
       this.#datastore.runQuery(query).then(data => {
         var tasks = data[0].map(a => a.task);
         const uniqueTasks = [...new Set(tasks)];
@@ -421,12 +421,24 @@ class Database{
           return resolve([]);
         }
 
-        var query = this.#datastore.createQuery('task').filter(__key__.id, 'IN', uniqueTasks);
+        var taskKeys = [];
+
+        uniqueTasks.forEach(t => {
+          taskKeys.push(this.#datastore.key(['task', this.#datastore.int(t)]));
+        });
+
+        var query = this.#datastore.createQuery('task').filter('__key__', 'IN', taskKeys);
         this.#datastore.runQuery(query).then(data => {
           var projects = data[0].map(a => a.project);
           const uniqueProjects = [...new Set(projects)];
 
-          var query = this.#datastore.createQuery('project').filter(__key__.id, 'IN', uniqueProjects);
+          var projectKeys = [];
+
+          uniqueProjects.forEach(p => {
+            projectKeys.push(this.#datastore.key(['project', this.#datastore.int(p)]));
+          });
+
+          var query = this.#datastore.createQuery('project').filter('__key__', 'IN', projectKeys);
           this.#datastore.runQuery(query).then(data => {
             var limitedData = data[0].map(p => {
               return {

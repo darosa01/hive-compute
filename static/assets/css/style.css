@@ -29,11 +29,11 @@ em:hover{
 footer{
   text-align: center;
   padding: 1rem;
-  padding-bottom: 2rem;
+  padding-bottom: 4rem;
 }
 
 header{
-  background-color: hsl(0, 0%, 10%);
+  background-color: var(--header-background-color);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -198,6 +198,30 @@ section{
   font-size: 1rem;
 }
 
+.how-it-works-grid{
+  align-items: center;
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, 1fr);
+  justify-content: center;
+  padding: 0 2rem;
+  padding-bottom: 3rem;
+}
+.how-it-works-grid > ol{
+  font-size: 1.5rem;
+}
+.how-it-works-grid li{
+  margin-bottom: 1rem;
+}
+.how-it-works-grid > div:last-child{
+  align-self: flex-start;
+  text-align: center;
+}
+.how-it-works-grid a{
+  color: black;
+  text-decoration: none;
+}
+
 .indicator{
   width: calc(32px/2);
   height: calc(32px/2);
@@ -316,11 +340,21 @@ section{
 }
 
 .investigations{
+  background-color: hsl(0, 0%, 70%);
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  padding-top: 2rem;
   justify-content: center;
   gap: 2rem;
+  min-height: 50vh;
+}
+
+.investigations-title{
+  background-color: var(--header-background-color);
+  color: white;
+  font-size: 1.75rem;
+  font-weight: bold;
+  padding: 1rem;
+  text-align: center;
 }
 
 .login-page{
@@ -394,6 +428,7 @@ section{
 }
 
 .no-contributions{
+  padding: 2rem;
   text-align: center;
 }
 .no-contributions a{
@@ -423,6 +458,26 @@ section{
 }
 .operation-explanation p{
   padding: 0 4rem;
+}
+
+.project-grid{
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, 1fr);
+  justify-content: center;
+  padding: 2rem 3rem;
+}
+.project-grid > div:first-child{
+  text-align: center;
+}
+.project-grid p{
+  font-size: 1.5rem;
+}
+
+.project-ilustration{
+  animation: shake 15s ease-in-out infinite;
+  width: 350px;
 }
 
 .rainbow-background{
@@ -487,8 +542,9 @@ section{
 }
 
 .subtitle{
-  font-size: 1.25rem;
+  font-size: 3rem;
   font-weight: bold;
+  padding: 1rem;
 }
 
 .title{
@@ -510,7 +566,29 @@ section{
   padding: 0 2rem;
 }
 
+#contributions{
+  padding: 0;
+}
+
+#detailed-explanation{
+  padding-top: 0;
+}
+
+#how-it-works{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 100vh;
+  padding-bottom: 0;
+}
+
+#project{
+  background-color: var(--header-background-color);
+  color: white;
+}
+
 #yes-contributions{
+  color: white;
   display: none;
 }
 
@@ -569,6 +647,14 @@ section{
     padding: 0;
   }
 
+  .project-grid{
+    display: block;
+  }
+
+  .project-grid > div:first-child{
+    display: none;
+  }
+
   .status-bar{
     border-radius: 0;
     margin: 0;
@@ -612,8 +698,153 @@ section{
   }
 }
 
+@keyframes shake {
+  0% { transform: translate(2px, -3px) rotate(0deg); }
+  10% { transform: translate(-2px, -3px) rotate(-1deg); }
+  20% { transform: translate(-4px, 0px) rotate(1deg); }
+  30% { transform: translate(4px, 3px) rotate(0deg); }
+  40% { transform: translate(2px, -2px) rotate(1deg); }
+  50% { transform: translate(-2px, 3px) rotate(-1deg); }
+  60% { transform: translate(-4px, 3px) rotate(0deg); }
+  70% { transform: translate(3px, 1px) rotate(-1deg); }
+  80% { transform: translate(-2px, -2px) rotate(1deg); }
+  90% { transform: translate(2px, 3px) rotate(1deg); }
+  100% { transform: translate(1px, -3px) rotate(-1deg); }
+}
+
 @keyframes rainbow { 
   0%{background-position:0% 82%}
   50%{background-position:100% 19%}
   100%{background-position:0% 82%}
+}
+
+@keyframes zoom-in-zoom-out {
+  0% {
+    transform: scale(1, 1);
+  }
+  25% {
+    transform: scale(1.1, 1.1);
+  }
+  50% {
+    transform: scale(1.1, 1.1);
+  }
+  75% {
+    transform: scale(1, 1);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+/* Slider */
+
+#mySlider a {
+	padding: 10px 25px;
+	background-color: var(--main-background-color);
+	color: #fff;
+	border-radius: 25px;
+	text-decoration: none;
+}
+#mySlider a:hover {
+  background-color: var(--main-hover-color);
+}
+
+#mySlider {
+	overflow: hidden;
+  position: relative;
+  width: 100%;
+  height: 450px;
+}
+
+.singleSlide {
+  background-size: cover;
+  height: 450px;
+  box-sizing: border-box;
+  position: absolute;
+  left: 100%;
+  width: 100%;
+  top: 0px;
+}
+
+.slideOverlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 4rem 15vw;
+  height: 100%;
+  box-sizing: border-box;
+  line-height: 50px;
+}
+.slideOverlay > h1 {
+  font-size: 3rem;
+}
+.slideOverlay > h4 {
+  font-size: 1.5rem;
+}
+	
+#sliderNav {
+	position: relative;
+  top: -225px;
+  z-index: 999;
+  font-size: 42px;
+}
+
+#sliderNav:hover { 
+  cursor: pointer; 	
+}
+
+#sliderPrev {
+  position: relative;
+  float: left;
+  left: 50px;
+}
+
+#sliderNext {
+  position: relative;
+  float: right;
+  right: 50px;
+}
+
+@-webkit-keyframes slideIn {
+  100% { left: 0; }
+}
+
+@keyframes slideIn {
+  100% { left: 0; }
+}
+
+.slideInRight {
+	left: -100%;
+	-webkit-animation: slideIn 1s forwards;
+  animation: slideIn 1s forwards;
+}
+
+.slideInLeft {
+	left: 100%;
+	-webkit-animation: slideIn 1s forwards;
+  animation: slideIn 1s forwards;
+}
+
+@-webkit-keyframes slideOutLeft {
+  100% { left: -100%; }
+}
+
+@keyframes slideOutLeft {
+  100% { left: -100%; }
+}
+
+.slideOutLeft {
+	-webkit-animation: slideOutLeft 1s forwards;
+  animation: slideOutLeft 1s forwards;
+}
+
+@-webkit-keyframes slideOutRight {
+  100% { left: 100%; }
+}
+
+@keyframes slideOutRight {
+  100% { left: 100%; }
+}
+
+.slideOutRight {
+	-webkit-animation: slideOutRight 1s forwards;
+  animation: slideOutRight 1s forwards;
 }
