@@ -14,7 +14,7 @@
   <script type="module" src="assets/js/main.js"></script>
 </head>
 <body>
-  <header>
+  <header class="scroll-snap">
     <div class="top-bar" id="top-bar">
       <div class="logo-group">
         <img src="assets/img/logo-hive.png" alt="logo" class="logo">
@@ -45,7 +45,7 @@
     </div>
   </header>
   <main>
-    <section id="contributions">
+    <section id="contributions" class="scroll-snap">
       <div id="yes-contributions">
         <div class="investigations-title">So far you have contributed to the following investigations:</div>
         <div id="mySlider"></div>
@@ -55,11 +55,16 @@
         </div>
       </div>
       <div class="no-contributions" id="no-contributions">
-        <div class="subtitle bigger">Looks like you haven't contributed to any projects yet...</div>
-        <div class="big">Press the <a href="#top-bar"><em>start</em></a> button at the top of the page to start computing!</div>
+        <div>
+          <img src="assets/img/sad-cat.png" alt="sad cat" class="no-contributions-ilustration">
+        </div>
+        <div>
+          <div class="subtitle bigger">Looks like you haven't contributed to any projects yet...</div>
+          <div class="no-contributions-text">Press the <a href="#top-bar"><em>start</em></a> button at the top of the page to start computing!</div>
+        </div>
       </div>
     </section>
-    <section id="project">
+    <section id="project" class="scroll-snap">
       <div class="subtitle">The project</div>
       <div class="project-grid">
         <div>
@@ -78,7 +83,7 @@
         </div>
       </div>
     </section>
-    <section id="how-it-works">
+    <section id="how-it-works" class="scroll-snap">
       <div class="subtitle">How it works</div>
       <div class="how-it-works-grid">
         <ol>
@@ -93,7 +98,7 @@
         </div>
       </div>
     </section>
-    <section id="detailed-explanation">
+    <section id="detailed-explanation" class="scroll-snap">
       <div class="subtitle">Detailed explanation</div>
       <p>
         And in case you still have doubts about how the system works... here's a more detailed 
@@ -137,6 +142,12 @@
           <div>Logo by Júlia</div>
           <div class="credits-subtitle">(from Flaticon - Freepik)</div>
           <a href="https://www.flaticon.com/authors/freepik" target="_blank">View more</a>
+        </div>
+        <div class="credits-card">
+          <img src="assets/img/credits/flaticon.webp" alt="Flaticon logo">
+          <div>Icons from Flaticon</div>
+          <div class="credits-subtitle">(Freepik, Vectorslabs and Smashicons)</div>
+          <a href="https://www.flaticon.com/" target="_blank">View more</a>
         </div>
         <div class="credits-card">
           <img src="assets/img/credits/google-fonts.png" alt="Google Fonts logo">

@@ -28,7 +28,7 @@ class Database {
 
       dbPromise.onupgradeneeded = function(e){
         if (!dbPromise.result.objectStoreNames.contains(trueThis.#objectStore)) {
-          dbPromise.result.createObjectStore(trueThis.#objectStore, { keyPath: 'name' });
+          dbPromise.result.createObjectStore(trueThis.#objectStore, { keyPath: 'dataId' });
         }
       }  
       dbPromise.onerror = function(e){

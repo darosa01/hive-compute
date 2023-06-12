@@ -91,7 +91,8 @@ class P2P {
     return new Promise((resolve, reject) => {
       this.#db.getAllFiles().then(files => {
         files.forEach(file => {
-          this.#client.seed(file.buffer, { name: file.name });
+          var newFile = new File(file.buffer, file.name);
+          this.#client.seed(newFile);
         });
         resolve();
       }).catch(reject);

@@ -148,7 +148,7 @@ function getContributions(userId){
     });
     if(data.length < 1){
       contributionsSection.style.display = "none";
-      noContributionsSection.style.display = "block";
+      noContributionsSection.style.display = "grid";
     } else {
       slider.buildSlider();
       contributionsSection.style.display = "block";
