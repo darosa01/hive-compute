@@ -161,13 +161,28 @@
         </form>
       </main>
       <div class="popup" v-if="actionDone || actionError">
-        <div class="popup-element" v-if="actionDone">
-          The project has been added successfully
-          <div class="discrete-link" @click="actionDone = false">Close</div>
+        <div class="confirmation-popup" v-if="actionDone">
+          <div class="confirmation-title">
+            Task created
+          </div>
+          <div class="confirmation-text">
+            The task has been created successfully.
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation" @click="actionDone = false">Close</button>
+          </div>
         </div>
-        <div class="popup-element error" v-if="actionError">
-          An error occurred adding the project <br> Please try again
-          <div class="discrete-link" @click="actionError = false">Close</div>
+
+        <div class="confirmation-popup" v-if="actionError">
+          <div class="confirmation-title">
+            Error
+          </div>
+          <div class="confirmation-text">
+            An error occurred creating the task <br> Please try again
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation" @click="actionError = false">Close</button>
+          </div>
         </div>
       </div>
       <loading-icon v-if="isLoading"></loading-icon>
@@ -252,13 +267,28 @@
         </form>
       </main>
       <div class="popup" v-if="actionDone || actionError">
-        <div class="popup-element" v-if="actionDone">
-          The project has been added successfully
-          <div class="discrete-link" @click="actionDone = false">Close</div>
+        <div class="confirmation-popup" v-if="actionDone">
+          <div class="confirmation-title">
+            Project created
+          </div>
+          <div class="confirmation-text">
+            The project has been created successfully.
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation" @click="actionDone = false">Close</button>
+          </div>
         </div>
-        <div class="popup-element error" v-if="actionError">
-          An error occurred adding the project <br> Please try again
-          <div class="discrete-link" @click="actionError = false">Close</div>
+
+        <div class="confirmation-popup" v-if="actionError">
+          <div class="confirmation-title">
+            Error
+          </div>
+          <div class="confirmation-text">
+            An error occurred creating the project <br> Please try again
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation" @click="actionError = false">Close</button>
+          </div>
         </div>
       </div>
       <loading-icon v-if="isLoading"></loading-icon>
@@ -328,11 +358,16 @@
         </div>
       </main>
       <div class="popup" v-if="deleting">
-        <div class="popup-element error">
-          <div>Are you sure you want to delete the project <b>{{this.selectedProject.title}}</b>?</div>
-          <div class="confirmation-buttons">
-            <div @click="deleteProject()">Delete project</div>
-            <div class="red-link" @click="deleting = false">Cancel</div>
+        <div class="confirmation-popup">
+          <div class="confirmation-title">
+            Delete <b>{{this.selectedProject.title}}</b>?
+          </div>
+          <div class="confirmation-text">
+            The project will be permanently deleted.
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation button-remove" @click="deleteProject()">Delete</button>
+            <button class="button-confirmation" @click="deleting = false">Cancel</button>
           </div>
         </div>
       </div>
@@ -412,6 +447,7 @@
               projectId: this.selectedProject.id
             })
           }).then(res => res.json()).then(tasks => {
+            console.log(tasks);
             this.tasks = tasks;
             this.isLoading = false;
           }).catch(console.error);
@@ -477,11 +513,16 @@
         </div>
       </main>
       <div class="popup" v-if="deleting">
-        <div class="popup-element error">
-          <div>Are you sure you want to delete the task <b>{{this.selectedTask.title}}</b>?</div>
-          <div class="confirmation-buttons">
-            <div @click="deleteTask()">Delete task</div>
-            <div class="red-link" @click="deleting = false">Cancel</div>
+        <div class="confirmation-popup">
+          <div class="confirmation-title">
+            Delete <b>{{this.selectedTask.title}}</b>?
+          </div>
+          <div class="confirmation-text">
+            The task will be permanently deleted.
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation button-remove" @click="deleteTask()">Delete</button>
+            <button class="button-confirmation" @click="deleting = false">Cancel</button>
           </div>
         </div>
       </div>
@@ -497,6 +538,7 @@
           project: this.selectedTask.project,
           dataList: [],
           projectList: [],
+          resultFormat: "raw",
           isLoading: true
         }
       },
@@ -508,8 +550,20 @@
           normalizedTitle = normalizedTitle.replace(" ", "_");
           return "results-" + normalizedTitle + ".txt";
         },
+        formattedResult(){
+          var result = this.selectedTask.result;
+
+          switch(this.resultFormat){
+            case "raw":
+              return result;
+            case "string":
+              return this.resultToString(result);
+            case "json":
+              return this.resultToJSON(result);
+          }
+        },
         resultsDownloadLink(){
-          return "data:text/plain;charset=utf-8," + encodeURIComponent(this.selectedTask.result);
+          return "data:text/plain;charset=utf-8," + encodeURIComponent(this.formattedResult);
         }
       },
       methods: {
@@ -541,6 +595,25 @@
             this.isLoading = false;
             this.$emit('changePage', 4);
           }).catch(console.error);
+        },
+        resultToJSON(resultArray){
+          var resultString = this.resultToString(resultArray);
+
+          try {
+            const resultJSON = JSON.parse(resultString);
+            return resultJSON;
+          } catch (error) {
+            return "(The result cannot be converted to JSON)";
+          }
+        },
+        resultToString(resultArray){
+          var newString = "";
+
+          resultArray.forEach(elem => {
+            newString += String.fromCharCode(elem);
+          });
+
+          return newString;
         }
       },
       mounted(){
@@ -577,9 +650,16 @@
         </form>
         <div v-if="selectedTask.result">
           <div class="section-subtitle">Result:</div>
+          <div>Format: 
+            <select v-model="resultFormat">
+              <option value="raw" selected>Raw (memory)</option>
+              <option value="string">String</option>
+              <option value="json">JSON</option>
+            </select>
+          </div>
           <div class="results-box">
             <pre>
-              {{selectedTask.result}}
+              {{formattedResult}}
             </pre>
             <a :href="resultsDownloadLink" :download="downloadName" title="Download JSON results"><img src="assets/img/download.svg" alt="download results"></a>
           </div>
@@ -802,12 +882,16 @@
         </div>
       </main>
       <div class="popup" v-if="deleting">
-        <div class="popup-element error">
-          <div>Are you sure you want to delete the data file <b>{{this.selectedData.title}}</b>?</div>
-          <div>Note that if any task currently uses this data it could cause unexpected failures.</div>
-          <div class="confirmation-buttons">
-            <div @click="deleteData()">Delete data</div>
-            <div class="red-link" @click="deleting = false">Cancel</div>
+        <div class="confirmation-popup">
+          <div class="confirmation-title">
+            Delete <b>{{this.selectedData.title}}</b>?
+          </div>
+          <div class="confirmation-text">
+            Note that if any task currently uses this data it could cause unexpected failures.
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation button-remove" @click="deleteData()">Delete</button>
+            <button class="button-confirmation" @click="deleting = false">Cancel</button>
           </div>
         </div>
       </div>

@@ -47,14 +47,8 @@ router.post("/addProject", upload.single('image'), function(req, res){
 
   const entity = req.session.user.entity;
   const projectData = req.body;
-  const imageBuffer = req.file.buffer;
-  const imageName = req.file.originalname;
-  const image = {
-    name: imageName,
-    buffer: imageBuffer
-  }
 
-  db.createProject(projectData, image, entity).then(() => {
+  db.createProject(projectData, req.file, entity).then(() => {
     return res.status(200).end();
   }).catch(err => {
     console.log(err);

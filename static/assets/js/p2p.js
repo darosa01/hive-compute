@@ -46,14 +46,13 @@ class P2P {
     console.info("Downloading data from torrent.");
     return new Promise((resolve, reject) => {
       this.#client.add(torrentUrl, (torrent) => {
-        torrent.files.forEach((file) => {
-          file.getBuffer((err, buffer) => {
-            if (err) {
-              return reject(err);
-            }
-            this.#db.saveData(dataId, name, buffer);
-            return resolve(buffer);
-          });
+        var file = torrent.files[0];
+        file.getBuffer((err, buffer) => {
+          if (err) {
+            return reject(err);
+          }
+          this.#db.saveData(dataId, name, buffer);
+          return resolve(buffer);
         });
       });
     });

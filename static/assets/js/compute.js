@@ -53,10 +53,12 @@ class Compute {
         
         this.#worker.onmessage = (event) => {
           clearTimeout(this.#timeoutExecution);
-          
+
+          var resultArray = Array.from(event.data).map(elem => parseInt(elem, 10));;
+
           this.#submitCompletedTask({
             task: task.id,
-            result: event.data
+            result: resultArray
           });
           
           this.#worker.terminate();

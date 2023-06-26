@@ -63,7 +63,8 @@
           name: "",
           surname: "",
           email: "",
-          isAdmin: false
+          isAdmin: false,
+          isLoading: false
         }
       },
       emits: ['changePage'],
@@ -77,6 +78,8 @@
         createNewUser: function(){
           var form = document.getElementById('user-form');
           if(form.reportValidity()){
+            this.isLoading = true;
+
             const newUser = {
               name: this.name,
               surname: this.surname,
@@ -93,8 +96,10 @@
             }).then(() => {
               this.actionDone = true;
               this.clearInputs();
+              this.isLoading = false;
             }).catch(err => {
               console.log(err);
+              this.isLoading = false;
               this.actionError = true;
             });
           }
@@ -125,13 +130,28 @@
         </form>
       </main>
       <div class="popup" v-if="actionDone || actionError">
-        <div class="popup-element" v-if="actionDone">
-          The researcher has been added successfully.
-          <div class="discrete-link" @click="actionDone = false">Close</div>
+        <div class="confirmation-popup" v-if="actionDone">
+          <div class="confirmation-title">
+            Researcher added
+          </div>
+          <div class="confirmation-text">
+            The researcher has been added successfully.
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation" @click="actionDone = false">Close</button>
+          </div>
         </div>
-        <div class="popup-element error" v-if="actionError">
-          An error occurred adding the project. <br> Please try again.
-          <div class="discrete-link" @click="actionError = false">Close</div>
+
+        <div class="confirmation-popup" v-if="actionError">
+          <div class="confirmation-title">
+            Error
+          </div>
+          <div class="confirmation-text">
+            An error occurred adding the project. <br> Please try again.
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation" @click="actionError = false">Close</button>
+          </div>
         </div>
       </div>
       `
@@ -183,6 +203,8 @@
           this.reseting = true;
         },
         toggleAdmin: function(){
+          this.isLoading = true;
+          this.toAdmin = false;
           fetch('/admin/toggleAdmin', {
             method: 'POST',
             headers: {
@@ -193,10 +215,12 @@
             })
           }).then(() => {
             this.getUsers();
-            this.toAdmin = false;
+            this.isLoading = false;
           }).catch(console.error);
         },
         deleteUser: function(){
+          this.isLoading = true;
+          this.deleting = false;
           fetch('/admin/deleteResearcher', {
             method: 'POST',
             headers: {
@@ -207,10 +231,12 @@
             })
           }).then(() => {
             this.getUsers();
-            this.deleting = false;
+            this.isLoading = false;
           }).catch(console.error);
         },
         resetPassword: function(){
+          this.isLoading = true;
+          this.reseting = false;
           fetch('/admin/resetResearcherPassword', {
             method: 'POST',
             headers: {
@@ -221,7 +247,7 @@
             })
           }).then(() => {
             this.getUsers();
-            this.reseting = false;
+            this.isLoading = false;
           }).catch(console.error);
         }
       },
@@ -248,25 +274,42 @@
         </div>
       </main>
       <div class="popup" v-if="toAdmin || deleting || reseting">
-        <div class="popup-element" v-if="toAdmin">
-          <div>Are you sure you want to add/remove the admin role to the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b>?</div>
-          <div class="confirmation-buttons">
-            <div @click="toggleAdmin()">Change admin role</div>
-            <div class="red-link" @click="toAdmin = false">Cancel</div>
+        <div class="confirmation-popup" v-if="toAdmin">
+          <div class="confirmation-title">
+            Change role
+          </div>
+          <div class="confirmation-text">
+            This will add/remove the admin role to the user "{{this.selectedUser.name}} {{this.selectedUser.surname}}".
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation button-remove" @click="toggleAdmin()">Change role</button>
+            <button class="button-confirmation" @click="toAdmin = false">Cancel</button>
           </div>
         </div>
-        <div class="popup-element error" v-if="deleting">
-          <div>Are you sure you want to delete the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b>?</div>
-          <div class="confirmation-buttons">
-            <div @click="deleteUser()">Delete user</div>
-            <div class="red-link" @click="deleting = false">Cancel</div>
+
+        <div class="confirmation-popup" v-if="deleting">
+          <div class="confirmation-title">
+            Delete user
+          </div>
+          <div class="confirmation-text">
+            This action will permanently delete the user "{{this.selectedUser.name}} {{this.selectedUser.surname}}".
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation button-remove" @click="deleteUser()">Delete user</button>
+            <button class="button-confirmation" @click="deleting = false">Cancel</button>
           </div>
         </div>
-        <div class="popup-element" v-if="reseting">
-          <div>Are you sure you want to reset the user <b>{{this.selectedUser.name}} {{this.selectedUser.surname}}</b> password?</div>
-          <div class="confirmation-buttons">
-            <div @click="resetPassword()">Reset password</div>
-            <div class="red-link" @click="reseting = false">Cancel</div>
+
+        <div class="confirmation-popup" v-if="reseting">
+          <div class="confirmation-title">
+            Reset password
+          </div>
+          <div class="confirmation-text">
+            This action will reset the password of the user "{{this.selectedUser.name}} {{this.selectedUser.surname}}" and a new one will be sent by email.
+          </div>
+          <div class="button-group-confirmation">
+            <button class="button-confirmation button-remove" @click="resetPassword()">Reset password</button>
+            <button class="button-confirmation" @click="reseting = false">Cancel</button>
           </div>
         </div>
       </div>

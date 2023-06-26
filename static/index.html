@@ -60,7 +60,7 @@
         </div>
         <div>
           <div class="subtitle bigger">Looks like you haven't contributed to any projects yet...</div>
-          <div class="no-contributions-text">Press the <a href="#top-bar"><em>start</em></a> button at the top of the page to start computing!</div>
+          <div class="no-contributions-text">Press the <a href="#top-bar"><em>start</em></a> button at the top of the page to start computing! (You can also try to refresh the page in case it has not been updated yet)</div>
         </div>
       </div>
     </section>
@@ -98,39 +98,21 @@
         </div>
       </div>
     </section>
-    <section id="detailed-explanation" class="scroll-snap">
+    <section id="detailed-explanation" class="detailed-explanation">
       <div class="subtitle">Detailed explanation</div>
       <p>
-        And in case you still have doubts about how the system works... here's a more detailed 
-        explanation with an example:
+        To better understand what the architecture looks like, an example of the traffic between the different elements is shown below:
       </p>
       <div class="operation-explanation">
-        <img src="assets/img/how-it-works/step1.png" alt="step 1">
-        <p>
-          In this first stage we have 4 users from 3 different networks, some of them with previous 
-          files from other tasks they have already completed.
-          Users B and D send the request for a new task to the central server, and when it receives 
-          them, it performs the corresponding queries in the database and returns the results.
-        </p>
-        <img src="assets/img/how-it-works/step2.png" alt="step 2">
-        <p>
-          Once the central server has received the necessary information from the database, it sends 
-          user B a new task, and since it knows that no one has the file 4 that is needed to perform 
-          the calculations, it also sends it to him.
-          In the same way, it sends user D a new task, but in this case, as it requires file 1 to perform 
-          the calculations and it is available to other users, it also sends him the instructions to 
-          start a new P2P connection with these and be able to get the file you need.
-        </p>
-        <img src="assets/img/how-it-works/step3.png" alt="step 3">
-        <p>
-          User D establishes with some of the users who have the file he needs and asks them for it. 
-          Then they send you, either a part or the whole file.
-        </p>
-        <img src="assets/img/how-it-works/step4.png" alt="step 4">
-        <p>
-          Once the users finish their respective tasks, they send the results back to the central 
-          server, which stores them in the database.
-        </p>
+        <img src="assets/img/how-it-works/architecture.png" alt="architecture">
+        <ol>
+          <li>User B requests a new task (yellow route).</li>
+          <li>The server queries the database to retrieve the available tasks and selects the most appropriate one based on the selected distribution method (gray path).</li>
+          <li>The server sends the task to the user, indicating that there is a data dependency (file 2) and where to find the Torrent file needed to download it (orange path).</li>
+          <li>User B, using Torrent, establishes a connection with user A and obtains the data file (blue path).</li>
+          <li>Finally, user B calculates the result of the task and sends it back to the server (yellow route).</li>
+          <li>The server stores the result in the database (gray path) and waits for new requests.</li>
+        </ol>
       </div>
     </section>
     <hr>

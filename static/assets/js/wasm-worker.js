@@ -29,8 +29,13 @@ onmessage = async event => {
   var resultArray = null;
 
   if(file != null){
-    const fileBuffer = await file.arrayBuffer();
-    const dataArray = new Uint8Array(fileBuffer);
+    var dataArray;
+    if (file instanceof Uint8Array) {
+      dataArray = file;
+    } else {
+      const fileBuffer = await file.arrayBuffer();
+      dataArray = new Uint8Array(fileBuffer);
+    }
     const dataSize = dataArray.length;
     const currentSize = exports.memory.buffer.byteLength;
     const neededPages = Math.ceil(dataSize / 65536); // 64KB pages

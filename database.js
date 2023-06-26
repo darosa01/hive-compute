@@ -9,6 +9,7 @@ const { Storage } = require('@google-cloud/storage');
 
 class Database{
 
+  #baseStorageUrl;
   #bucketName;
   #createTorrent;
   #datastore;
@@ -18,6 +19,7 @@ class Database{
   #taskDistributionMethod;
 
   constructor(){
+    this.#baseStorageUrl = 'https://storage.googleapis.com/';
     this.#bucketName = 'hive-compute.appspot.com';
     this.#options = options;
     this.#datastore = new Datastore();
@@ -30,6 +32,13 @@ class Database{
     });
   }
 
+  /**
+   * Adds a new data dependency to the database
+   * @param {String} name Title used to identify the data dependency
+   * @param {Multer.file} file File containing the data
+   * @param {String} entity Entity id
+   * @returns {Promise} Promise object that resolves when data has been added
+   */
   addData(name, file, entity){
     return new Promise((resolve, reject) => {
 
@@ -42,10 +51,8 @@ class Database{
       this.#storage.bucket(this.#bucketName).file(destFileName).save(newFile).then(() => {
         const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
 
-        fileRef.getSignedUrl({
-          action: "read",
-          expires: "9999-12-31"
-        }).then(dataUrl => {
+        fileRef.makePublic().then(() => {
+          const dataUrl = this.#baseStorageUrl.concat(this.#bucketName, '/', destFileName);
 
           this.#createTorrent(newFile, {
             name: destFileName,
@@ -59,11 +66,9 @@ class Database{
 
             this.#storage.bucket(this.#bucketName).file(torrentFileName).save(torrent).then(() => {
               const torrentRef = this.#storage.bucket(this.#bucketName).file(torrentFileName);
-      
-              torrentRef.getSignedUrl({
-                action: "read",
-                expires: "9999-12-31"
-              }).then(torrentUrl => {
+
+              torrentRef.makePublic().then(() => {
+                const torrentUrl = this.#baseStorageUrl.concat(this.#bucketName, '/', torrentFileName);
 
                 const dataKey = this.#datastore.key(['datafile']);
 
@@ -71,9 +76,9 @@ class Database{
                   key: dataKey,
                   data: {
                     title: name,
-                    fileUrl: dataUrl[0],
+                    fileUrl: dataUrl,
                     fileName: destFileName,
-                    torrentUrl: torrentUrl[0],
+                    torrentUrl: torrentUrl,
                     torrentName: torrentFileName,
                     entity: entity
                   }
@@ -88,6 +93,12 @@ class Database{
     });
   }
 
+  /**
+   * Checks if a task has the minimum required number of equal results to be marked as resolved.
+   * If the condition is satisfied, it activates the "isResolved" flag in the database entry.
+   * @param {String} taskId Task id
+   * @returns {Promise} Promise object that resolves when the operation is completed
+   */
   #checkIfTaskIsDone(taskId){
     return new Promise((resolve, reject) => {
 
@@ -107,7 +118,7 @@ class Database{
           for(let i = 0; i < results.length; i++){
             if(resultCount[results[i]] >= this.#options.minimumEqualAnswersToValidate){
               isTaskCompleted = true;
-              this.#markTaskAsCompleted(taskId, results[i]).then(resolve).catch(reject);
+              this.#markTaskAsCompleted(taskId, results[i].split(',')).then(resolve).catch(reject);
               break;
             }
           }
@@ -119,6 +130,13 @@ class Database{
     });
   }
 
+  /**
+   * Checks if the email and password corresponds to an existent user
+   * @param {*} email User email
+   * @param {*} password User password
+   * @returns {Promise<object|null>} Promise object that resolves to an object containing the user data 
+   * if it exists or to null if it does not.
+   */
   checkUser(email, password){
     return new Promise((resolve, reject) => {
       const kind = "researcher";
@@ -155,6 +173,13 @@ class Database{
     // This function will not be implemented in this stage.
   }
   
+  /**
+   * Creates a new project
+   * @param {Object} projectData Object containing the project data
+   * @param {Multer.file} projectImage Representative image of the project
+   * @param {String} entity Entity id
+   * @returns {Promise} Promise object that resolves when the project has been created
+   */
   createProject(projectData, projectImage, entity){
     return new Promise((resolve, reject) => {
       const kind = "project";
@@ -162,7 +187,7 @@ class Database{
 
       projectData.entity = entity;
 
-      const extension = projectImage.name.split('.').at(-1);
+      const extension = projectImage.originalname.split('.').at(-1);
 
       var destFileName = "image-" + crypto.randomUUID() + "." + extension;
 
@@ -171,11 +196,10 @@ class Database{
       this.#storage.bucket(this.#bucketName).file(destFileName).save(projectImage.buffer).then(() => {
         const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
 
-        fileRef.getSignedUrl({
-          action: "read",
-          expires: "9999-12-31"
-        }).then(imageUrl => {
-          projectData.imageUrl = imageUrl[0];
+        fileRef.makePublic().then(() => {
+          const imageUrl = this.#baseStorageUrl.concat(this.#bucketName, '/', destFileName);
+
+          projectData.imageUrl = imageUrl;
   
           const project = {
             key: projectKey,
@@ -183,7 +207,7 @@ class Database{
           }
       
           this.#datastore.save(project).then(resolve).catch(reject);
-        });
+        }).catch(reject);
       }).catch(reject);
     });
   }
@@ -228,15 +252,13 @@ class Database{
 
         this.#storage.bucket(this.#bucketName).file(destFileName).save(wasmBuffer).then(() => {
           const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
-  
-          fileRef.getSignedUrl({
-            action: "read",
-            expires: "9999-12-31"
-          }).then(wasmUrl => {
 
+          fileRef.makePublic().then(() => {
+            const wasmUrl = this.#baseStorageUrl.concat(this.#bucketName, '/', destFileName);
+  
             const taskKey = this.#datastore.key(['task']);
 
-            taskData.wasmUrl = wasmUrl[0];
+            taskData.wasmUrl = wasmUrl;
             taskData.wasmName = destFileName;
             taskData.isActive = false;
 
@@ -437,6 +459,11 @@ class Database{
           uniqueProjects.forEach(p => {
             projectKeys.push(this.#datastore.key(['project', this.#datastore.int(p)]));
           });
+
+          // Could happen if tasks have been deleted
+          if(projectKeys.length < 1){
+            return resolve([]);
+          }
 
           var query = this.#datastore.createQuery('project').filter('__key__', 'IN', projectKeys);
           this.#datastore.runQuery(query).then(data => {
@@ -876,7 +903,7 @@ class Database{
             } else {
               this.#storage.bucket(this.#bucketName).file(projectData.imageName).delete().catch(reject);
 
-              const extension = file.originalname.split('.').at(-1);
+              const extension = newImage.originalname.split('.').at(-1);
               const destFileName = "image-" + crypto.randomUUID() + "." + extension;
 
               this.#storage.bucket(this.#bucketName).file(destFileName).save(newImage.buffer).then(() => {
@@ -884,10 +911,9 @@ class Database{
 
                 const fileRef = this.#storage.bucket(this.#bucketName).file(destFileName);
 
-                fileRef.getSignedUrl({
-                  action: "read",
-                  expires: "9999-12-31"
-                }).then(imageUrl => {
+                fileRef.makePublic().then(() => {
+                  const imageUrl = this.#baseStorageUrl.concat(this.#bucketName, '/', destFileName);
+
                   projectData.imageUrl = imageUrl;
 
                   const updatedProject = {

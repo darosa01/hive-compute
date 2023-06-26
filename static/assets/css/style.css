@@ -202,6 +202,10 @@ section{
   font-size: 1rem;
 }
 
+.detailed-explanation{
+  font-size: 1.25rem;
+}
+
 .how-it-works-grid{
   align-items: center;
   display: grid;
@@ -353,11 +357,14 @@ section{
 }
 
 .investigations-title{
+  align-items: center;
   background-color: var(--header-background-color);
   color: white;
+  display: flex;
   font-size: 1.75rem;
   font-weight: bold;
   height: 10vh;
+  justify-content: center;
   padding: 1rem;
   text-align: center;
 }
@@ -738,6 +745,7 @@ section{
 
   .no-contributions{
     grid-template-columns: 1fr;
+    height: fit-content;
   }
   .no-contributions > div:first-child{
     display: none;
@@ -752,6 +760,18 @@ section{
 
   .title{
     font-size: 3rem;
+  }
+
+  #contributions{
+    min-height: fit-content;
+  }
+
+  #how-it-works{
+    min-height: fit-content;
+  }
+
+  #project{
+    min-height: fit-content;
   }
 }
 
