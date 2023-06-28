@@ -27,6 +27,11 @@ class Compute {
 
     if(task){
       var wasmResponse = await fetch(task.wasmUrl);
+
+      if(!wasmResponse.ok){
+        throw new Error("Error: " + wasmResponse.status);
+      }
+
       var wasmCode = await wasmResponse.arrayBuffer();
       var data = null;
 
@@ -85,7 +90,13 @@ class Compute {
         headers: {
           "User-Id": this.#userId
         }
-      }).then(res => res.json()).then(task => {
+      }).then(res => {
+        if(!res.ok){
+          throw new Error("Error: " + res.status);
+        }
+
+        return res.json();
+      }).then(task => {
         if(task){
           resolve(task); // task to resolve
         } else if(task === null){
@@ -130,6 +141,10 @@ class Compute {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(data)
+    }).then(res => {
+      if(!res.ok){
+        throw new Error("Error: " + res.status);
+      }
     }).catch(console.error);
   }
 }

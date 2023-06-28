@@ -26,7 +26,13 @@
       },
       methods: {
         getNumbers: function(){
-          fetch('/entities/getResearcherNumbers').then(res => res.json()).then(numbers => {
+          fetch('/entities/getResearcherNumbers').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(numbers => {
             this.numbers = numbers;
             this.isLoading = false;
           }).catch(console.error);
@@ -83,14 +89,26 @@
           this.dataDependencies = "";
         },
         getData: function(){
-          fetch("/entities/getMyDataFiles").then(res => res.json()).then(data => {
+          fetch("/entities/getMyDataFiles").then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(data => {
             this.dataList = data;
           }).catch(console.error);
         },
         getProjects: function(){
           fetch("/entities/getMyProjects", {
             method: "GET"
-          }).then(res => res.json()).then(projects => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(projects => {
             this.projectList = projects;
             this.isLoading = false;
           }).catch(console.error);
@@ -116,7 +134,11 @@
           fetch("/entities/addTask", {
             method: 'POST',
             body: formData
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
             this.clearInputs();
             this.isLoading = false;
             this.actionDone = true;
@@ -222,7 +244,7 @@
             body: formData
           }).then(res => {
             this.isLoading = false;
-            if(res.status == 200){
+            if(res.ok){
               this.title = "";
               this.text = "";
               this.url = "";
@@ -321,7 +343,10 @@
             body: JSON.stringify({
               projectId: this.selectedProject.id
             })
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.getProjects();
           }).catch(console.error);
         },
@@ -329,7 +354,13 @@
           this.$emit('editProject', project);
         },
         getProjects: function(){
-          fetch("/entities/getMyProjects").then(res => res.json()).then(projects => {
+          fetch("/entities/getMyProjects").then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(projects => {
             this.projects = projects;
             this.isLoading = false;
           }).catch(err => console.log(err));
@@ -409,7 +440,10 @@
             body: JSON.stringify({
               taskId: this.selectedTask.id
             })
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.getProjectTasks();
           }).catch(console.error);
         },
@@ -432,7 +466,10 @@
           fetch("/entities/updateProject", {
             method: 'POST',
             body: formData
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.isLoading = false;
             this.$emit('changePage', 4); 
           }).catch(console.error);
@@ -446,7 +483,13 @@
             body: JSON.stringify({
               projectId: this.selectedProject.id
             })
-          }).then(res => res.json()).then(tasks => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(tasks => {
             console.log(tasks);
             this.tasks = tasks;
             this.isLoading = false;
@@ -465,7 +508,10 @@
             body: JSON.stringify({
               taskId: task.id
             })
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.getProjectTasks()
           }).catch(console.error);
         }
@@ -568,12 +614,24 @@
       },
       methods: {
         loadData: function(){
-          fetch('/entities/getMyDataFiles').then(res => res.json()).then(data => {
+          fetch('/entities/getMyDataFiles').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(data => {
             this.dataList = data;
           }).catch(console.error);
         },
         loadProjects: function(){
-          fetch('/entities/getMyProjects').then(res => res.json()).then(data => {
+          fetch('/entities/getMyProjects').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(data => {
             this.projectList = data;
             this.isLoading = false;
           }).catch(console.error);
@@ -591,7 +649,10 @@
               dataDependencies: this.dataDependencies,
               project: this.project
             })
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.isLoading = false;
             this.$emit('changePage', 4);
           }).catch(console.error);
@@ -686,7 +747,13 @@
       emits: ['changePage'],
       methods: {
         getMyData: function(){
-          fetch('/entities/getMyData').then(res => res.json()).then(data => {
+          fetch('/entities/getMyData').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(data => {
             this.user = data;
             this.isLoading = false;
           }).catch(console.error);
@@ -718,7 +785,10 @@
               'Content-Type': 'application/json'
             },
             body: JSON.stringify(this.user)
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.isLoading = false;
             this.$emit('changePage', 0);
           }).catch(console.error);
@@ -786,7 +856,10 @@
           fetch('/entities/addData', {
             method: 'POST',
             body: formData
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.isLoading = false;
             this.$emit('changePage', 9);
           }).catch(console.error);
@@ -846,12 +919,21 @@
             body: JSON.stringify({ 
               dataId: this.selectedData.id 
             })
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.loadData();
           }).catch(console.error);
         },
         loadData: function(){
-          fetch('/entities/getMyDataFiles').then(res => res.json()).then(data => {
+          fetch('/entities/getMyDataFiles').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(data => {
             this.dataList = data;
             this.isLoading = false;
           }).catch(console.error);
@@ -945,11 +1027,23 @@
           this.page = 7;
         },
         loadData: function(){
-          fetch('/entities/getMyData').then(res => res.json()).then(userData => {
+          fetch('/entities/getMyData').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(userData => {
             this.user = userData;
           });
 
-          fetch('/entities/getEntityInfo').then(res => res.json()).then(data => {
+          fetch('/entities/getEntityInfo').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(data => {
             this.entity = data;
           }).catch(console.error);
         }

@@ -78,7 +78,13 @@ class P2P {
             'User-Id': this.#userId
           },
           body: JSON.stringify({dataId: dataId})
-        }).then(res => res.json()).then(data => {
+        }).then(res => {
+          if(!res.ok){
+            throw new Error("Error: " + res.status);
+          }
+  
+          return res.json();
+        }).then(data => {
           this.#downloadTorrent(data.torrentUrl, dataId, data.fileName).then(resolve).catch(reject);
         }).catch(reject);
       }).catch(reject);

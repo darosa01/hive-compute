@@ -138,7 +138,13 @@ function getContributions(userId){
     headers: {
       "User-Id": userId
     }
-  }).then(res => res.json()).then(data => {
+  }).then(res => {
+    if(!res.ok){
+      throw new Error("Error: " + res.status);
+    }
+
+    return res.json();
+  }).then(data => {
     console.info("Contributions loaded.");
     var contributionsSection = document.getElementById("yes-contributions");
     var noContributionsSection = document.getElementById("no-contributions");

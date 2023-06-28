@@ -47,7 +47,13 @@
       <loading-icon v-if="isLoading"></loading-icon>
       `,
       mounted(){
-        fetch('/admin/getNumbers').then(res => res.json()).then(data => {
+        fetch('/admin/getNumbers').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(data => {
           this.userNumber = data.researchers;
           this.adminNumber = data.admins;
           this.isLoading = false;
@@ -93,7 +99,10 @@
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify(newUser)
-            }).then(() => {
+            }).then(res => {
+              if(!res.ok){
+                throw new Error("Error: " + res.status);
+              }
               this.actionDone = true;
               this.clearInputs();
               this.isLoading = false;
@@ -182,7 +191,13 @@
         getUsers: function(){
           fetch("/admin/getResearchers", {
             method: "GET"
-          }).then(res => res.json()).then(users => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(users => {
             this.users = users;
             this.isLoading = false;
           }).catch(console.log);
@@ -213,7 +228,10 @@
             body: JSON.stringify({
               email: this.selectedUser.email
             })
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.getUsers();
             this.isLoading = false;
           }).catch(console.error);
@@ -229,7 +247,10 @@
             body: JSON.stringify({
               email: this.selectedUser.email
             })
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.getUsers();
             this.isLoading = false;
           }).catch(console.error);
@@ -245,7 +266,10 @@
             body: JSON.stringify({
               email: this.selectedUser.email
             })
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.getUsers();
             this.isLoading = false;
           }).catch(console.error);
@@ -337,7 +361,13 @@
       emits: ['changePage'],
       methods: {
         getMyData: function(){
-          fetch('/entities/getMyData').then(res => res.json()).then(data => {
+          fetch('/entities/getMyData').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(data => {
             this.user = data;
             this.isLoading = false;
           }).catch(console.error);
@@ -369,7 +399,10 @@
               'Content-Type': 'application/json'
             },
             body: JSON.stringify(this.user)
-          }).then(() => {
+          }).then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
             this.$emit('changePage', 0);
           }).catch(console.error);
         }
@@ -446,11 +479,23 @@
           this.page = newPage;
         },
         loadData: function(){
-          fetch('/entities/getMyData').then(res => res.json()).then(userData => {
+          fetch('/entities/getMyData').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(userData => {
             this.user = userData;
           }).catch(console.error);
 
-          fetch('/admin/getEntityInfo').then(res => res.json()).then(data => {
+          fetch('/admin/getEntityInfo').then(res => {
+            if(!res.ok){
+              throw new Error("Error: " + res.status);
+            }
+
+            return res.json();
+          }).then(data => {
             this.entity = data;
           }).catch(console.error);
         }
