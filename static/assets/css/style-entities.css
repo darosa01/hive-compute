@@ -24,6 +24,7 @@ header > div{
   justify-content: center;
 }
 header > div > div{
+  font-family: 'Helvetica Neue', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
   font-size: 2rem;
   font-weight: bold;
 }

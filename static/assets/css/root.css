@@ -3,3 +3,12 @@
   --main-background-color: hsl(200, 32%, 20%);
   --main-hover-color: hsl(200, 32%, 30%);
 }
+
+@font-face {
+  font-family: 'Helvetica Neue';
+  src: url('../fonts/HelveticaNeue-MediumExt.woff2') format('woff2'),
+      url('../fonts/HelveticaNeue-MediumExt.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
